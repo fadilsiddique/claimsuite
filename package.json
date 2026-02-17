@@ -1,0 +1,7 @@
+{
+    "private": true,
+    "scripts": {
+        "frontend-build": "cd frontend && yarn build",
+        "build": "yarn frontend-build"
+    }
+}
