@@ -1,0 +1,280 @@
+<template>
+  <div class="px-4 py-5">
+    <!-- Header -->
+    <div class="mb-6">
+      <h2 class="text-xl font-bold text-gray-900">Submit Expense</h2>
+      <p class="text-sm text-gray-500 mt-1">Fill in the details for your expense claim</p>
+    </div>
+
+    <!-- Form -->
+    <div class="space-y-4">
+      <!-- Claim Type -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Claim Type</label>
+        <Select
+          v-if="claimTypeOptions.length"
+          :options="claimTypeOptions"
+          v-model="form.claim_type"
+          placeholder="Select claim type"
+          size="lg"
+          variant="outline"
+        />
+        <div v-else-if="settingsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
+      </div>
+
+      <!-- Amount -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400">AED</span>
+          <input
+            v-model.number="form.amount"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            class="w-full h-12 pl-14 pr-4 text-lg font-semibold text-gray-900 bg-white border-2 border-gray-100 rounded-xl focus:border-gray-900 focus:ring-0 outline-none transition-colors tabular-nums"
+          />
+        </div>
+      </div>
+
+      <!-- Date -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Expense Date</label>
+        <DatePicker
+          v-model="form.expense_date"
+          placeholder="Select date"
+        />
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+        <textarea
+          v-model="form.description"
+          rows="3"
+          placeholder="What was this expense for?"
+          class="w-full px-4 py-3 text-sm text-gray-900 bg-white border-2 border-gray-100 rounded-xl focus:border-gray-900 focus:ring-0 outline-none transition-colors resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Receipt Upload -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Receipt</label>
+        <div
+          v-if="!uploadedFile && !isUploading"
+          class="relative border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors cursor-pointer"
+          @click="$refs.fileInput.click()"
+        >
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*,.pdf"
+            class="hidden"
+            @change="handleFileSelect"
+          />
+          <FeatherIcon name="upload-cloud" class="w-8 h-8 text-gray-300 mx-auto mb-2" />
+          <p class="text-sm text-gray-500">
+            <span class="font-medium text-gray-700">Tap to upload</span> receipt
+          </p>
+          <p class="text-xs text-gray-400 mt-1">Image or PDF, max 10MB</p>
+        </div>
+
+        <!-- Uploading state -->
+        <div
+          v-else-if="isUploading"
+          class="border-2 border-gray-100 rounded-xl p-4 bg-gray-50"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin shrink-0"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-700 truncate">Uploading...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Uploaded file -->
+        <div
+          v-else
+          class="border-2 border-gray-100 rounded-xl p-4 bg-white"
+        >
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-green-50 shrink-0">
+              <FeatherIcon name="check-circle" class="w-5 h-5 text-green-600" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ uploadedFile.file_name }}</p>
+              <p class="text-xs text-green-600">Uploaded</p>
+            </div>
+            <button
+              @click="removeFile"
+              class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+            >
+              <FeatherIcon name="x" class="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div
+      v-if="form.claim_type && form.amount"
+      class="mt-6 bg-gray-50 rounded-2xl p-4 border border-gray-100"
+    >
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Summary</p>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Type</span>
+          <span class="text-sm font-medium text-gray-900">{{ form.claim_type }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Amount</span>
+          <span class="text-sm font-bold text-gray-900">AED {{ formattedAmount }}</span>
+        </div>
+        <div v-if="mappedAccount" class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Account</span>
+          <span class="text-sm text-gray-500">{{ mappedAccount }}</span>
+        </div>
+        <div v-if="uploadedFile" class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Receipt</span>
+          <span class="text-sm text-green-600 flex items-center gap-1">
+            <FeatherIcon name="paperclip" class="w-3.5 h-3.5" />
+            Attached
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="mt-6">
+      <button
+        class="btn-primary w-full h-12 text-base font-semibold rounded-xl text-white flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="submitResource.loading || !isFormValid || isUploading"
+        @click="handleSubmit"
+      >
+        <span v-if="submitResource.loading" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+        Submit Claim
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+import { createResource, toast, Select, DatePicker } from 'frappe-ui'
+import { FeatherIcon } from 'frappe-ui'
+
+export default {
+  name: 'NewClaim',
+  components: { FeatherIcon, Select, DatePicker },
+  setup() {
+    const settingsResource = createResource({
+      url: 'claimsuite.api.get_claim_settings',
+      auto: true,
+    })
+
+    const submitResource = createResource({
+      url: 'claimsuite.api.create_expense_claim',
+    })
+
+    return { settingsResource, submitResource }
+  },
+  data() {
+    return {
+      form: {
+        claim_type: '',
+        amount: null,
+        expense_date: new Date().toISOString().split('T')[0],
+        description: '',
+      },
+      uploadedFile: null,
+      isUploading: false,
+    }
+  },
+  computed: {
+    claimTypes() {
+      return this.settingsResource.data?.claim_types || []
+    },
+    claimTypeOptions() {
+      return this.claimTypes.map(ct => ({ label: ct, value: ct }))
+    },
+    accountMap() {
+      return this.settingsResource.data?.account_map || {}
+    },
+    mappedAccount() {
+      return this.accountMap[this.form.claim_type] || ''
+    },
+    formattedAmount() {
+      return Number(this.form.amount || 0).toLocaleString('en-AE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    },
+    isFormValid() {
+      return this.form.claim_type && this.form.amount > 0 && this.form.expense_date
+    },
+  },
+  methods: {
+    async handleFileSelect(e) {
+      const file = e.target.files?.[0]
+      if (!file) return
+
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Maximum file size is 10MB')
+        return
+      }
+
+      this.isUploading = true
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await fetch('/api/method/claimsuite.api.upload_receipt', {
+          method: 'POST',
+          headers: {
+            'X-Frappe-CSRF-Token': window.csrf_token || '',
+          },
+          body: formData,
+        })
+
+        if (!res.ok) throw new Error('Upload failed')
+
+        const data = await res.json()
+        this.uploadedFile = data.message
+      } catch (err) {
+        toast.error('Could not upload the file. Please try again.')
+      }
+      this.isUploading = false
+      e.target.value = ''
+    },
+    removeFile() {
+      this.uploadedFile = null
+    },
+    async handleSubmit() {
+      if (!this.isFormValid) return
+
+      try {
+        await this.submitResource.submit({
+          claim_type: this.form.claim_type,
+          amount: this.form.amount,
+          expense_date: this.form.expense_date,
+          description: this.form.description,
+          file_url: this.uploadedFile?.file_url || '',
+        })
+
+        const result = this.submitResource.data
+        if (result?.name) {
+          toast.success(`Claim submitted: ${this.form.claim_type} — AED ${this.formattedAmount}`)
+          this.$router.push(`/claims/${result.name}`)
+        }
+      } catch (err) {
+        const messages = this.submitResource.error?.messages
+        const errorMsg = messages?.length
+          ? messages[0]
+          : 'Something went wrong. Please try again.'
+        toast.error(errorMsg)
+      }
+    },
+  },
+}
+</script>
