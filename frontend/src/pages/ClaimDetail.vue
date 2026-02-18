@@ -49,6 +49,10 @@
             <span class="text-sm text-gray-500">Company</span>
             <span class="text-sm font-medium text-gray-900">{{ claim.company }}</span>
           </div>
+          <div v-if="claim.project" class="flex items-center justify-between px-4 py-3.5">
+            <span class="text-sm text-gray-500">Project</span>
+            <span class="text-sm font-medium text-gray-900">{{ claim.project_name || claim.project }}</span>
+          </div>
           <div v-if="description" class="px-4 py-3.5">
             <span class="text-sm text-gray-500 block mb-1">Description</span>
             <span class="text-sm text-gray-900">{{ description }}</span>

@@ -39,6 +39,11 @@
   background-color: #1e8a74;
 }
 
+/* Ensure Popover dropdowns (DatePicker, Autocomplete, Select) appear above BottomNav (z-40) */
+.PopoverContent {
+  z-index: 50;
+}
+
 /* Page transitions */
 .fade-enter-active,
 .fade-leave-active {

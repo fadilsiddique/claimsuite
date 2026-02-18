@@ -97,6 +97,11 @@ export default {
     },
   },
   methods: {
+    handleScroll() {
+      const el = this.$refs.mainContent
+      if (!el) return
+      this.scrolledPastHeader = el.scrollTop > 120
+    },
     handleLogout() {
       this.showProfileMenu = false
       this.logout()
