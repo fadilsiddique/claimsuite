@@ -22,6 +22,24 @@
         <div v-else-if="settingsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
       </div>
 
+      <!-- Project -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          Project
+          <span class="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <Select
+          v-if="projectOptions.length"
+          :options="projectOptions"
+          v-model="form.project"
+          placeholder="Select projffggect..."
+          size="lg"
+          variant="outline"
+        />
+        <div v-else-if="projectsResource.loading" class="h-10 rounded-xl bg-gray-100 animate-pulse"></div>
+        <p v-else class="text-sm text-gray-400 py-2">No open projects available</p>
+      </div>
+
       <!-- Amount -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
@@ -46,6 +64,8 @@
           placeholder="Select date"
         />
       </div>
+
+
 
       <!-- Description -->
       <div>
@@ -136,6 +156,10 @@
           <span class="text-sm text-gray-600">Account</span>
           <span class="text-sm text-gray-500">{{ mappedAccount }}</span>
         </div>
+        <div v-if="form.project" class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Project</span>
+          <span class="text-sm text-gray-500">{{ selectedProjectLabel }}</span>
+        </div>
         <div v-if="uploadedFile" class="flex items-center justify-between">
           <span class="text-sm text-gray-600">Receipt</span>
           <span class="text-sm text-green-600 flex items-center gap-1">
@@ -173,11 +197,16 @@ export default {
       auto: true,
     })
 
+    const projectsResource = createResource({
+      url: 'claimsuite.api.get_projects',
+      auto: true,
+    })
+
     const submitResource = createResource({
       url: 'claimsuite.api.create_expense_claim',
     })
 
-    return { settingsResource, submitResource }
+    return { settingsResource, projectsResource, submitResource }
   },
   data() {
     return {
@@ -186,6 +215,7 @@ export default {
         amount: null,
         expense_date: new Date().toISOString().split('T')[0],
         description: '',
+        project: '',
       },
       uploadedFile: null,
       isUploading: false,
@@ -203,6 +233,13 @@ export default {
     },
     mappedAccount() {
       return this.accountMap[this.form.claim_type] || ''
+    },
+    projectOptions() {
+      return this.projectsResource.data || []
+    },
+    selectedProjectLabel() {
+      const opt = this.projectOptions.find(p => p.value === this.form.project)
+      return opt?.label || this.form.project
     },
     formattedAmount() {
       return Number(this.form.amount || 0).toLocaleString('en-AE', {
@@ -260,6 +297,7 @@ export default {
           expense_date: this.form.expense_date,
           description: this.form.description,
           file_url: this.uploadedFile?.file_url || '',
+          project: this.form.project || '',
         })
 
         const result = this.submitResource.data

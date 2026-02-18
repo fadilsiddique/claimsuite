@@ -20,7 +20,18 @@ def get_claim_settings():
 
 
 @frappe.whitelist()
-def create_expense_claim(claim_type, amount, expense_date, description="", file_url=""):
+def get_projects():
+	projects = frappe.get_all(
+		"Project",
+		filters={"status": "Open"},
+		fields=["name", "project_name"],
+		order_by="project_name asc",
+	)
+	return [{"label": p.project_name or p.name, "value": p.name} for p in projects]
+
+
+@frappe.whitelist()
+def create_expense_claim(claim_type, amount, expense_date, description="", file_url="", project=""):
 	amount = float(amount)
 	if amount <= 0:
 		frappe.throw(_("Amount must be greater than zero"))
@@ -43,24 +54,27 @@ def create_expense_claim(claim_type, amount, expense_date, description="", file_
 
 	remark = f"Expense Claim - {claim_type} - {description} - {expense_date}"
 
+	debit_row = {
+		"account": expense_account,
+		"debit_in_account_currency": amount,
+		"credit_in_account_currency": 0,
+	}
+	credit_row = {
+		"account": settings.default_payment_account,
+		"debit_in_account_currency": 0,
+		"credit_in_account_currency": amount,
+	}
+	if project:
+		debit_row["project"] = project
+		credit_row["project"] = project
+
 	je = frappe.get_doc({
 		"doctype": "Journal Entry",
 		"voucher_type": "Journal Entry",
 		"posting_date": expense_date,
 		"company": company,
 		"user_remark": remark,
-		"accounts": [
-			{
-				"account": expense_account,
-				"debit_in_account_currency": amount,
-				"credit_in_account_currency": 0,
-			},
-			{
-				"account": settings.default_payment_account,
-				"debit_in_account_currency": 0,
-				"credit_in_account_currency": amount,
-			},
-		],
+		"accounts": [debit_row, credit_row],
 	})
 	je.insert()
 
@@ -182,6 +196,15 @@ def get_claim_detail(name):
 		fields=["file_url", "file_name"],
 	)
 
+	# Extract project from the debit row (expense side)
+	project = None
+	project_name = None
+	for row in je.accounts:
+		if row.debit_in_account_currency > 0 and row.project:
+			project = row.project
+			project_name = frappe.db.get_value("Project", project, "project_name") or project
+			break
+
 	return {
 		"name": je.name,
 		"posting_date": je.posting_date,
@@ -190,6 +213,8 @@ def get_claim_detail(name):
 		"user_remark": je.user_remark,
 		"creation": je.creation,
 		"company": je.company,
+		"project": project,
+		"project_name": project_name,
 		"accounts": [
 			{
 				"account": row.account,
