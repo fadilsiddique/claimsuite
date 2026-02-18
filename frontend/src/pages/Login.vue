@@ -1,22 +1,19 @@
 <template>
-  <div class="min-h-screen flex flex-col" style="background: linear-gradient(150deg, #29A38B 0%, #1e8a74 100%)">
-    <!-- Branding -->
-    <div class="flex flex-col items-center justify-center flex-1 px-6 pb-4 pt-16">
+  <div class="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 py-12">
+    <!-- Brand mark -->
+    <div class="flex flex-col items-center mb-8">
       <div
-        class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-lg"
-        style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px)"
+        class="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 shadow-sm"
+        style="background: linear-gradient(135deg, #29A38B 0%, #1e8a74 100%)"
       >
-        <FeatherIcon name="file-text" class="w-8 h-8 text-white" />
+        <FeatherIcon name="file-text" class="w-6 h-6 text-white" />
       </div>
-      <h1 class="text-3xl font-bold text-white tracking-tight">ClaimSuite</h1>
-      <p class="text-white/70 text-sm mt-1">Expense Management</p>
+      <h1 class="text-xl font-bold text-gray-900">ClaimSuite</h1>
+      <p class="text-sm text-gray-400 mt-0.5">Expense Management</p>
     </div>
 
-    <!-- Login card (rounded-top sheet) -->
-    <div class="bg-white rounded-t-3xl px-6 pt-8 pb-10 shadow-2xl">
-      <h2 class="text-xl font-bold text-gray-900">Welcome back 👋</h2>
-      <p class="text-sm text-gray-500 mt-1 mb-6">Sign in to continue</p>
-
+    <!-- Login card -->
+    <div class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-6">
       <!-- Error -->
       <transition name="fade">
         <div
@@ -42,7 +39,7 @@
       </div>
 
       <!-- Password -->
-      <div class="mb-6">
+      <div class="mb-5">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
         <div class="relative">
           <input
