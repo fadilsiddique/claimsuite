@@ -22,6 +22,50 @@
         <div v-else-if="settingsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
       </div>
 
+      <!-- Payment Method -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Paid By</label>
+        <div class="flex rounded-xl overflow-hidden border-2 border-gray-100">
+          <button
+            :class="[
+              'flex-1 h-11 text-sm font-medium transition-colors',
+              form.payment_method === 'employee'
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50',
+            ]"
+            @click="selectPaymentMethod('employee')"
+          >
+            Paid by Me
+          </button>
+          <button
+            :class="[
+              'flex-1 h-11 text-sm font-medium transition-colors border-l-2 border-gray-100',
+              form.payment_method === 'company'
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50',
+            ]"
+            @click="selectPaymentMethod('company')"
+          >
+            Company Paid
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode of Payment (only when Company Paid) -->
+      <div v-if="form.payment_method === 'company'">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Mode of Payment</label>
+        <Select
+          v-if="modeOptions.length"
+          :options="modeOptions"
+          v-model="form.mode_of_payment"
+          placeholder="Select mode of payment"
+          size="lg"
+          variant="outline"
+        />
+        <div v-else-if="modesResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
+        <p v-else class="text-sm text-gray-400 py-2">No modes of payment available</p>
+      </div>
+
       <!-- Project -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -64,8 +108,6 @@
           placeholder="Select date"
         />
       </div>
-
-
 
       <!-- Description -->
       <div>
@@ -152,6 +194,16 @@
           <span class="text-sm text-gray-600">Amount</span>
           <span class="text-sm font-bold text-gray-900">AED {{ formattedAmount }}</span>
         </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Paid By</span>
+          <span class="text-sm text-gray-500">
+            {{ form.payment_method === 'company' ? 'Company' : 'Employee' }}
+          </span>
+        </div>
+        <div v-if="form.payment_method === 'company' && form.mode_of_payment" class="flex items-center justify-between">
+          <span class="text-sm text-gray-600">Mode</span>
+          <span class="text-sm text-gray-500">{{ form.mode_of_payment }}</span>
+        </div>
         <div v-if="mappedAccount" class="flex items-center justify-between">
           <span class="text-sm text-gray-600">Account</span>
           <span class="text-sm text-gray-500">{{ mappedAccount }}</span>
@@ -202,16 +254,23 @@ export default {
       auto: true,
     })
 
+    const modesResource = createResource({
+      url: 'claimsuite.api.get_modes_of_payment',
+      auto: true,
+    })
+
     const submitResource = createResource({
       url: 'claimsuite.api.create_expense_claim',
     })
 
-    return { settingsResource, projectsResource, submitResource }
+    return { settingsResource, projectsResource, modesResource, submitResource }
   },
   data() {
     return {
       form: {
         claim_type: '',
+        payment_method: 'employee',
+        mode_of_payment: '',
         amount: null,
         expense_date: new Date().toISOString().split('T')[0],
         description: '',
@@ -234,6 +293,9 @@ export default {
     mappedAccount() {
       return this.accountMap[this.form.claim_type] || ''
     },
+    modeOptions() {
+      return this.modesResource.data || []
+    },
     projectOptions() {
       return this.projectsResource.data || []
     },
@@ -248,10 +310,20 @@ export default {
       })
     },
     isFormValid() {
-      return this.form.claim_type && this.form.amount > 0 && this.form.expense_date
+      const base = this.form.claim_type && this.form.amount > 0 && this.form.expense_date
+      if (this.form.payment_method === 'company') {
+        return base && !!this.form.mode_of_payment
+      }
+      return base
     },
   },
   methods: {
+    selectPaymentMethod(method) {
+      this.form.payment_method = method
+      if (method === 'employee') {
+        this.form.mode_of_payment = ''
+      }
+    },
     async handleFileSelect(e) {
       const file = e.target.files?.[0]
       if (!file) return
@@ -298,6 +370,8 @@ export default {
           description: this.form.description,
           file_url: this.uploadedFile?.file_url || '',
           project: this.form.project || '',
+          payment_method: this.form.payment_method,
+          mode_of_payment: this.form.mode_of_payment || '',
         })
 
         const result = this.submitResource.data
