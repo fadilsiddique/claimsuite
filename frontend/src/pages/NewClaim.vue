@@ -32,7 +32,7 @@
           v-if="projectOptions.length"
           :options="projectOptions"
           v-model="form.project"
-          placeholder="Select projffggect..."
+          placeholder="Select project..."
           size="lg"
           variant="outline"
         />

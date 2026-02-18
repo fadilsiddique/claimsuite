@@ -15,6 +15,7 @@
         </transition>
       </router-view>
     </main>
+    <InstallPrompt />
     <BottomNav />
 
     <Dialog
@@ -54,12 +55,13 @@
 <script>
 import TopBar from './TopBar.vue'
 import BottomNav from './BottomNav.vue'
+import InstallPrompt from './InstallPrompt.vue'
 import { Dialog, FeatherIcon, Button } from 'frappe-ui'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'AppShell',
-  components: { TopBar, BottomNav, Dialog, FeatherIcon, Button },
+  components: { TopBar, BottomNav, InstallPrompt, Dialog, FeatherIcon, Button },
   setup() {
     const { userInfo, user, logout } = useAuth()
     return { userInfo, user, logout }
