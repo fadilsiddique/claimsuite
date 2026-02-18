@@ -3,6 +3,7 @@
     <TopBar
       :title="pageTitle"
       :show-back="showBack"
+      :show-brand="isDashboard && !scrolledPastHeader"
       :show-avatar="!showBack"
       :user-image="userImage"
       :transparent="isDashboard && !scrolledPastHeader"
