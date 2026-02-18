@@ -31,7 +31,32 @@ def get_projects():
 
 
 @frappe.whitelist()
-def create_expense_claim(claim_type, amount, expense_date, description="", file_url="", project=""):
+def get_modes_of_payment():
+	settings = frappe.get_single("Claim Settings")
+	company = frappe.db.get_value("Account", settings.default_payment_account, "company")
+
+	modes = frappe.get_all(
+		"Mode of Payment",
+		filters={"enabled": 1},
+		fields=["name"],
+		order_by="name asc",
+	)
+
+	result = []
+	for mode in modes:
+		account = frappe.db.get_value(
+			"Mode of Payment Account",
+			{"parent": mode.name, "company": company},
+			"default_account",
+		)
+		if account:
+			result.append({"label": mode.name, "value": mode.name, "account": account})
+
+	return result
+
+
+@frappe.whitelist()
+def create_expense_claim(claim_type, amount, expense_date, description="", file_url="", project="", payment_method="employee", mode_of_payment=""):
 	amount = float(amount)
 	if amount <= 0:
 		frappe.throw(_("Amount must be greater than zero"))
@@ -47,10 +72,27 @@ def create_expense_claim(claim_type, amount, expense_date, description="", file_
 	if not expense_account:
 		frappe.throw(_("No account mapped for claim type: {0}").format(claim_type))
 
-	if not settings.default_payment_account:
-		frappe.throw(_("Default payment account not configured in Claim Settings"))
-
 	company = frappe.db.get_value("Account", expense_account, "company")
+
+	# Determine credit account based on payment method
+	if payment_method == "company":
+		if not mode_of_payment:
+			frappe.throw(_("Please select a Mode of Payment"))
+		credit_account = frappe.db.get_value(
+			"Mode of Payment Account",
+			{"parent": mode_of_payment, "company": company},
+			"default_account",
+		)
+		if not credit_account:
+			frappe.throw(
+				_("No account configured for Mode of Payment '{0}' in company '{1}'").format(
+					mode_of_payment, company
+				)
+			)
+	else:
+		if not settings.default_payment_account:
+			frappe.throw(_("Default payment account not configured in Claim Settings"))
+		credit_account = settings.default_payment_account
 
 	remark = f"Expense Claim - {claim_type} - {description} - {expense_date}"
 
@@ -60,7 +102,7 @@ def create_expense_claim(claim_type, amount, expense_date, description="", file_
 		"credit_in_account_currency": 0,
 	}
 	credit_row = {
-		"account": settings.default_payment_account,
+		"account": credit_account,
 		"debit_in_account_currency": 0,
 		"credit_in_account_currency": amount,
 	}
