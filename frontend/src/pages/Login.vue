@@ -3,7 +3,7 @@
     <!-- Brand mark -->
     <div class="flex flex-col items-center mb-8">
       <img
-        src="/assets/claimsuite/frontend/icon-source.png"
+        :src="'/assets/claimsuite/frontend/icon-source.png'"
         alt="ClaimSuite"
         class="w-20 h-20 mb-3"
       />
