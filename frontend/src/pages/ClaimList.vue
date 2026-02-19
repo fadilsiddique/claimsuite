@@ -132,13 +132,21 @@ export default {
   mounted() {
     this.fetchClaims()
     this.setupObserver()
+    window.addEventListener('app:refresh', this._onRefresh)
   },
   beforeUnmount() {
     if (this.observer) {
       this.observer.disconnect()
     }
+    window.removeEventListener('app:refresh', this._onRefresh)
   },
   methods: {
+    _onRefresh() {
+      this.claims = []
+      this.start = 0
+      this.hasMore = false
+      this.fetchClaims()
+    },
     setupObserver() {
       this.observer = new IntersectionObserver(
         (entries) => {

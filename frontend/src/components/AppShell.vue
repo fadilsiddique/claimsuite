@@ -9,6 +9,29 @@
       :transparent="isDashboard && !scrolledPastHeader"
       @avatar-click="showProfileMenu = true"
     />
+
+    <!-- Pull-to-refresh indicator (fixed, below top bar) -->
+    <div class="fixed left-0 right-0 z-20 flex justify-center pointer-events-none" style="top: 56px">
+      <div
+        class="flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-md"
+        :style="{
+          transform: isPulling
+            ? `translateY(${pullDistance - 4}px)`
+            : isRefreshing
+            ? 'translateY(20px)'
+            : 'translateY(-48px)',
+          transition: isPulling ? 'none' : 'transform 0.3s ease',
+          opacity: isPulling || isRefreshing ? 1 : 0,
+        }"
+      >
+        <div
+          class="w-5 h-5 border-2 rounded-full"
+          :class="isRefreshing ? 'border-gray-200 border-t-[#29A38B] animate-spin' : 'border-gray-400'"
+          :style="!isRefreshing ? { transform: `rotate(${pullDistance * 3}deg)` } : {}"
+        ></div>
+      </div>
+    </div>
+
     <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto" :class="{ '-mt-14': isDashboard }">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
@@ -71,13 +94,26 @@ export default {
     return {
       showProfileMenu: false,
       scrolledPastHeader: false,
+      isPulling: false,
+      pullDistance: 0,
+      isRefreshing: false,
     }
   },
   mounted() {
-    this.$refs.mainContent?.addEventListener('scroll', this.handleScroll, { passive: true })
+    const el = this.$refs.mainContent
+    if (!el) return
+    el.addEventListener('scroll', this.handleScroll, { passive: true })
+    el.addEventListener('touchstart', this._ptrTouchStart, { passive: true })
+    el.addEventListener('touchmove', this._ptrTouchMove, { passive: false })
+    el.addEventListener('touchend', this._ptrTouchEnd, { passive: true })
   },
   beforeUnmount() {
-    this.$refs.mainContent?.removeEventListener('scroll', this.handleScroll)
+    const el = this.$refs.mainContent
+    if (!el) return
+    el.removeEventListener('scroll', this.handleScroll)
+    el.removeEventListener('touchstart', this._ptrTouchStart)
+    el.removeEventListener('touchmove', this._ptrTouchMove)
+    el.removeEventListener('touchend', this._ptrTouchEnd)
   },
   computed: {
     pageTitle() {
@@ -108,6 +144,40 @@ export default {
     handleLogout() {
       this.showProfileMenu = false
       this.logout()
+    },
+
+    // Pull-to-refresh
+    _ptrTouchStart(e) {
+      if (this.$refs.mainContent?.scrollTop !== 0) return
+      this._ptrStartY = e.touches[0].clientY
+      this._ptrActive = true
+    },
+    _ptrTouchMove(e) {
+      if (!this._ptrActive) return
+      const dy = e.touches[0].clientY - (this._ptrStartY || 0)
+      if (dy <= 0 || this.$refs.mainContent?.scrollTop > 0) {
+        this._ptrActive = false
+        this.isPulling = false
+        this.pullDistance = 0
+        return
+      }
+      e.preventDefault()
+      this.isPulling = true
+      this.pullDistance = Math.min(dy * 0.45, 80)
+    },
+    _ptrTouchEnd() {
+      if (!this._ptrActive) return
+      this._ptrActive = false
+      if (this.pullDistance >= 55) {
+        this.isRefreshing = true
+        this.isPulling = false
+        this.pullDistance = 0
+        window.dispatchEvent(new Event('app:refresh'))
+        setTimeout(() => { this.isRefreshing = false }, 1500)
+      } else {
+        this.isPulling = false
+        this.pullDistance = 0
+      }
     },
   },
 }

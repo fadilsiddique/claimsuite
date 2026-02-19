@@ -191,8 +191,15 @@ export default {
   },
   mounted() {
     this.fetchDetail()
+    window.addEventListener('app:refresh', this._onRefresh)
+  },
+  beforeUnmount() {
+    window.removeEventListener('app:refresh', this._onRefresh)
   },
   methods: {
+    _onRefresh() {
+      this.fetchDetail()
+    },
     fetchDetail() {
       const name = this.$route.params.name
       if (name) {

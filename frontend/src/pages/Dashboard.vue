@@ -157,7 +157,16 @@ export default {
 
     return { statsResource, userInfo }
   },
+  mounted() {
+    window.addEventListener('app:refresh', this._onRefresh)
+  },
+  beforeUnmount() {
+    window.removeEventListener('app:refresh', this._onRefresh)
+  },
   methods: {
+    _onRefresh() {
+      this.statsResource.reload()
+    },
     formatCurrency(val) {
       return Number(val || 0).toLocaleString('en-AE', {
         minimumFractionDigits: 2,
