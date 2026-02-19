@@ -104,9 +104,10 @@
       <!-- Date -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Expense Date</label>
-        <DatePicker
+        <input
+          type="date"
           v-model="form.expense_date"
-          placeholder="Select date"
+          class="w-full h-12 px-4 text-sm text-gray-900 bg-white border-2 border-gray-100 rounded-xl focus:border-gray-900 focus:ring-0 outline-none transition-colors"
         />
       </div>
 
@@ -238,12 +239,12 @@
 </template>
 
 <script>
-import { createResource, toast, Select, DatePicker } from 'frappe-ui'
+import { createResource, toast, Select } from 'frappe-ui'
 import { FeatherIcon } from 'frappe-ui'
 
 export default {
   name: 'NewClaim',
-  components: { FeatherIcon, Select, DatePicker },
+  components: { FeatherIcon, Select },
   setup() {
     const settingsResource = createResource({
       url: 'claimsuite.api.get_claim_settings',
