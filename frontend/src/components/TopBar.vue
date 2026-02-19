@@ -17,7 +17,7 @@
           class="w-7 h-7 rounded-lg overflow-hidden bg-white shadow-sm shrink-0"
         >
           <img
-            src="/assets/claimsuite/frontend/icon-source.png"
+            :src="'/assets/claimsuite/frontend/icon-source.png'"
             alt="CS"
             class="w-full h-full object-contain"
           />
