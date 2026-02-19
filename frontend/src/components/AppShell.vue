@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto" :class="{ '-mt-14': isDashboard }">
+    <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto" style="overscroll-behavior-y: none" :class="{ '-mt-14': isDashboard }">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -104,7 +104,7 @@ export default {
     if (!el) return
     el.addEventListener('scroll', this.handleScroll, { passive: true })
     el.addEventListener('touchstart', this._ptrTouchStart, { passive: true })
-    el.addEventListener('touchmove', this._ptrTouchMove, { passive: false })
+    el.addEventListener('touchmove', this._ptrTouchMove, { passive: true })
     el.addEventListener('touchend', this._ptrTouchEnd, { passive: true })
   },
   beforeUnmount() {
@@ -151,10 +151,9 @@ export default {
     _ptrTouchStart(e) {
       if (this.$refs.mainContent?.scrollTop !== 0) return
       // Ignore if inertia/momentum scroll just brought us to top
-      if (Date.now() - (this._lastScrollTime || 0) < 300) return
+      if (Date.now() - (this._lastScrollTime || 0) < 500) return
       this._ptrStartY = e.touches[0].clientY
       this._ptrActive = true
-      this._ptrPreventing = false
     },
     _ptrTouchMove(e) {
       if (!this._ptrActive) return
@@ -163,27 +162,20 @@ export default {
       // Cancel if pulling upward or content has scrolled away from top
       if (dy <= 0 || this.$refs.mainContent?.scrollTop > 0) {
         this._ptrActive = false
-        this._ptrPreventing = false
         this.isPulling = false
         this.pullDistance = 0
         return
       }
 
-      // Don't commit to PTR until past a dead zone (avoids accidental triggers)
+      // Dead zone before showing indicator
       if (dy < 12) return
 
-      // Only start preventing native scroll once we're sure it's a downward pull
-      if (!this._ptrPreventing) {
-        this._ptrPreventing = true
-      }
-      e.preventDefault()
       this.isPulling = true
       this.pullDistance = Math.min((dy - 12) * 0.45, 80)
     },
     _ptrTouchEnd() {
       if (!this._ptrActive) return
       this._ptrActive = false
-      this._ptrPreventing = false
       if (this.pullDistance >= 55) {
         this.isRefreshing = true
         this.isPulling = false
@@ -196,5 +188,6 @@ export default {
       }
     },
   },
+
 }
 </script>
