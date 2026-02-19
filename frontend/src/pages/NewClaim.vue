@@ -8,6 +8,34 @@
 
     <!-- Form -->
     <div class="space-y-4">
+      <!-- Payment Method -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Paid By</label>
+        <div class="flex rounded-xl overflow-hidden border-2 border-gray-100">
+          <button
+            :class="[
+              'flex-1 h-11 text-sm font-medium transition-colors',
+              form.payment_method === 'employee'
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50',
+            ]"
+            @click="selectPaymentMethod('employee')"
+          >
+            Me
+          </button>
+          <button
+            :class="[
+              'flex-1 h-11 text-sm font-medium transition-colors border-l-2 border-gray-100',
+              form.payment_method === 'company'
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50',
+            ]"
+            @click="selectPaymentMethod('company')"
+          >
+            Company
+          </button>
+        </div>
+      </div>
       <!-- Claim Type -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Claim Type</label>
@@ -22,34 +50,7 @@
         <div v-else-if="settingsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
       </div>
 
-      <!-- Payment Method -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Paid By</label>
-        <div class="flex rounded-xl overflow-hidden border-2 border-gray-100">
-          <button
-            :class="[
-              'flex-1 h-11 text-sm font-medium transition-colors',
-              form.payment_method === 'employee'
-                ? 'bg-gray-900 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50',
-            ]"
-            @click="selectPaymentMethod('employee')"
-          >
-            Paid by Me
-          </button>
-          <button
-            :class="[
-              'flex-1 h-11 text-sm font-medium transition-colors border-l-2 border-gray-100',
-              form.payment_method === 'company'
-                ? 'bg-gray-900 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50',
-            ]"
-            @click="selectPaymentMethod('company')"
-          >
-            Company Paid
-          </button>
-        </div>
-      </div>
+
 
       <!-- Mode of Payment (only when Company Paid) -->
       <div v-if="form.payment_method === 'company'">
