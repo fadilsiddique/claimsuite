@@ -140,6 +140,7 @@ export default {
       const el = this.$refs.mainContent
       if (!el) return
       this.scrolledPastHeader = el.scrollTop > 120
+      this._lastScrollTime = Date.now()
     },
     handleLogout() {
       this.showProfileMenu = false
@@ -149,25 +150,40 @@ export default {
     // Pull-to-refresh
     _ptrTouchStart(e) {
       if (this.$refs.mainContent?.scrollTop !== 0) return
+      // Ignore if inertia/momentum scroll just brought us to top
+      if (Date.now() - (this._lastScrollTime || 0) < 300) return
       this._ptrStartY = e.touches[0].clientY
       this._ptrActive = true
+      this._ptrPreventing = false
     },
     _ptrTouchMove(e) {
       if (!this._ptrActive) return
       const dy = e.touches[0].clientY - (this._ptrStartY || 0)
+
+      // Cancel if pulling upward or content has scrolled away from top
       if (dy <= 0 || this.$refs.mainContent?.scrollTop > 0) {
         this._ptrActive = false
+        this._ptrPreventing = false
         this.isPulling = false
         this.pullDistance = 0
         return
       }
+
+      // Don't commit to PTR until past a dead zone (avoids accidental triggers)
+      if (dy < 12) return
+
+      // Only start preventing native scroll once we're sure it's a downward pull
+      if (!this._ptrPreventing) {
+        this._ptrPreventing = true
+      }
       e.preventDefault()
       this.isPulling = true
-      this.pullDistance = Math.min(dy * 0.45, 80)
+      this.pullDistance = Math.min((dy - 12) * 0.45, 80)
     },
     _ptrTouchEnd() {
       if (!this._ptrActive) return
       this._ptrActive = false
+      this._ptrPreventing = false
       if (this.pullDistance >= 55) {
         this.isRefreshing = true
         this.isPulling = false
