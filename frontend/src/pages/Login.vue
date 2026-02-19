@@ -2,12 +2,11 @@
   <div class="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 py-12">
     <!-- Brand mark -->
     <div class="flex flex-col items-center mb-8">
-      <div
-        class="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 shadow-sm"
-        style="background: linear-gradient(135deg, #29A38B 0%, #1e8a74 100%)"
-      >
-        <FeatherIcon name="file-text" class="w-6 h-6 text-white" />
-      </div>
+      <img
+        src="/assets/claimsuite/frontend/icon-source.png"
+        alt="ClaimSuite"
+        class="w-20 h-20 mb-3"
+      />
       <h1 class="text-xl font-bold text-gray-900">ClaimSuite</h1>
       <p class="text-sm text-gray-400 mt-0.5">Expense Management</p>
     </div>

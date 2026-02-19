@@ -14,10 +14,13 @@
         </button>
         <div
           v-if="showBrand && !showBack"
-          class="flex items-center justify-center w-7 h-7 rounded-lg"
-          style="background: rgba(255,255,255,0.2)"
+          class="w-7 h-7 rounded-lg overflow-hidden bg-white shadow-sm shrink-0"
         >
-          <FeatherIcon name="file-text" class="w-4 h-4 text-white" />
+          <img
+            src="/assets/claimsuite/frontend/icon-source.png"
+            alt="CS"
+            class="w-full h-full object-contain"
+          />
         </div>
         <h1 class="text-lg font-semibold truncate" :class="transparent ? 'text-white' : 'text-gray-900'">{{ title }}</h1>
       </div>
