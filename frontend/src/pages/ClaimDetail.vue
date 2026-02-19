@@ -19,12 +19,21 @@
     <template v-else-if="claim">
       <!-- Amount Hero -->
       <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mb-4 text-center">
-        <span
-          class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mb-3"
-          :class="statusClass"
-        >
-          {{ statusLabel }}
-        </span>
+        <div class="flex items-center justify-center gap-2 mb-3">
+          <span
+            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+            :class="statusClass"
+          >
+            {{ statusLabel }}
+          </span>
+          <span
+            v-if="claim.docstatus === 1"
+            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+            :class="paymentStatusClass"
+          >
+            {{ paymentStatusLabel }}
+          </span>
+        </div>
         <p class="text-3xl font-bold text-gray-900 tabular-nums">
           AED {{ formattedAmount }}
         </p>
@@ -52,6 +61,25 @@
           <div v-if="claim.project" class="flex items-center justify-between px-4 py-3.5">
             <span class="text-sm text-gray-500">Project</span>
             <span class="text-sm font-medium text-gray-900">{{ claim.project_name || claim.project }}</span>
+          </div>
+          <div v-if="claim.docstatus === 1" class="flex items-center justify-between px-4 py-3.5">
+            <span class="text-sm text-gray-500">Payment</span>
+            <span
+              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+              :class="paymentStatusClass"
+            >
+              {{ paymentStatusLabel }}
+            </span>
+          </div>
+          <div v-if="claim.payment_journal" class="flex items-center justify-between px-4 py-3.5">
+            <span class="text-sm text-gray-500">Payment Ref</span>
+            <a
+              :href="`/app/journal-entry/${claim.payment_journal}`"
+              target="_blank"
+              class="text-sm font-medium text-blue-600 hover:underline"
+            >
+              {{ claim.payment_journal }}
+            </a>
           </div>
           <div v-if="description" class="px-4 py-3.5">
             <span class="text-sm text-gray-500 block mb-1">Description</span>
@@ -151,6 +179,14 @@ export default {
       if (this.claim?.docstatus === 0) return 'bg-gray-100 text-gray-700'
       if (this.claim?.docstatus === 1) return 'bg-blue-50 text-blue-700'
       return 'bg-red-50 text-red-600'
+    },
+    paymentStatusLabel() {
+      return this.claim?.payment_status === 'Paid' ? 'Paid' : 'Pending'
+    },
+    paymentStatusClass() {
+      return this.claim?.payment_status === 'Paid'
+        ? 'bg-green-50 text-green-700'
+        : 'bg-amber-50 text-amber-700'
     },
   },
   mounted() {
