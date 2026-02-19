@@ -25,6 +25,13 @@
           >
             {{ statusLabel }}
           </span>
+          <span
+            v-if="claim.docstatus === 1"
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            :class="paymentStatusClass"
+          >
+            {{ paymentStatusLabel }}
+          </span>
         </div>
       </div>
     </div>
@@ -90,6 +97,14 @@ export default {
       if (this.claim.docstatus === 0) return 'bg-gray-100 text-gray-600'
       if (this.claim.docstatus === 1) return 'bg-blue-50 text-blue-700'
       return 'bg-red-50 text-red-600'
+    },
+    paymentStatusLabel() {
+      return this.claim.custom_payment_to_employee === 'Paid' ? 'Paid' : 'Pending'
+    },
+    paymentStatusClass() {
+      return this.claim.custom_payment_to_employee === 'Paid'
+        ? 'bg-green-50 text-green-700'
+        : 'bg-amber-50 text-amber-700'
     },
   },
   methods: {

@@ -133,6 +133,42 @@ def create_expense_claim(claim_type, amount, expense_date, description="", file_
 
 
 @frappe.whitelist()
+def create_payment_journal(expense_journal, payable_account, payment_account, amount, posting_date, company):
+	"""Create a payment JE to reimburse the employee and link it back to the expense JE."""
+	amount = float(amount)
+
+	je = frappe.get_doc({
+		"doctype": "Journal Entry",
+		"voucher_type": "Journal Entry",
+		"posting_date": posting_date,
+		"company": company,
+		"user_remark": f"Employee reimbursement for {expense_journal}",
+		"accounts": [
+			{
+				"account": payable_account,
+				"debit_in_account_currency": amount,
+				"credit_in_account_currency": 0,
+			},
+			{
+				"account": payment_account,
+				"debit_in_account_currency": 0,
+				"credit_in_account_currency": amount,
+			},
+		],
+	})
+	je.insert()
+	je.submit()
+
+	# Link the payment JE back to the original expense JE
+	frappe.db.set_value("Journal Entry", expense_journal, {
+		"custom_payment_journal": je.name,
+		"custom_payment_to_employee": "Paid",
+	})
+
+	return je.name
+
+
+@frappe.whitelist()
 def upload_receipt():
 	"""Upload a receipt file and return the file URL."""
 	if not frappe.request.files:
@@ -216,7 +252,8 @@ def get_claims(status="all", start=0, limit=20):
 	claims = frappe.get_all(
 		"Journal Entry",
 		filters=filters,
-		fields=["name", "posting_date", "total_debit", "docstatus", "user_remark", "creation"],
+		fields=["name", "posting_date", "total_debit", "docstatus", "user_remark", "creation",
+				"custom_payment_to_employee", "custom_payment_journal"],
 		order_by="creation desc",
 		start=int(start),
 		page_length=int(limit),
@@ -257,6 +294,8 @@ def get_claim_detail(name):
 		"company": je.company,
 		"project": project,
 		"project_name": project_name,
+		"payment_status": je.custom_payment_to_employee or "",
+		"payment_journal": je.custom_payment_journal or "",
 		"accounts": [
 			{
 				"account": row.account,
