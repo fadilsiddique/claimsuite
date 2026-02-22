@@ -39,15 +39,15 @@
       <!-- Claim Type -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Claim Type</label>
-        <Select
-          v-if="claimTypeOptions.length"
-          :options="claimTypeOptions"
+        <div v-if="settingsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
+        <select
+          v-else
           v-model="form.claim_type"
-          placeholder="Select claim type"
-          size="lg"
-          variant="outline"
-        />
-        <div v-else-if="settingsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
+          class="w-full h-12 px-4 text-sm text-gray-900 bg-white border-2 border-gray-100 rounded-xl focus:border-gray-900 focus:ring-0 outline-none transition-colors appearance-none"
+        >
+          <option value="" disabled>Select claim type</option>
+          <option v-for="ct in claimTypes" :key="ct" :value="ct">{{ ct }}</option>
+        </select>
       </div>
 
 
@@ -55,16 +55,16 @@
       <!-- Mode of Payment (only when Company Paid) -->
       <div v-if="form.payment_method === 'company'">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Mode of Payment</label>
-        <Select
-          v-if="modeOptions.length"
-          :options="modeOptions"
+        <div v-if="modesResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
+        <p v-else-if="!modeOptions.length" class="text-sm text-gray-400 py-2">No modes of payment available</p>
+        <select
+          v-else
           v-model="form.mode_of_payment"
-          placeholder="Select mode of payment"
-          size="lg"
-          variant="outline"
-        />
-        <div v-else-if="modesResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
-        <p v-else class="text-sm text-gray-400 py-2">No modes of payment available</p>
+          class="w-full h-12 px-4 text-sm text-gray-900 bg-white border-2 border-gray-100 rounded-xl focus:border-gray-900 focus:ring-0 outline-none transition-colors appearance-none"
+        >
+          <option value="" disabled>Select mode of payment</option>
+          <option v-for="m in modeOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+        </select>
       </div>
 
       <!-- Project -->
@@ -73,16 +73,16 @@
           Project
           <span class="text-gray-400 font-normal">(optional)</span>
         </label>
-        <Select
-          v-if="projectOptions.length"
-          :options="projectOptions"
+        <div v-if="projectsResource.loading" class="h-12 rounded-xl bg-gray-100 animate-pulse"></div>
+        <p v-else-if="!projectOptions.length" class="text-sm text-gray-400 py-2">No open projects available</p>
+        <select
+          v-else
           v-model="form.project"
-          placeholder="Select project..."
-          size="lg"
-          variant="outline"
-        />
-        <div v-else-if="projectsResource.loading" class="h-10 rounded-xl bg-gray-100 animate-pulse"></div>
-        <p v-else class="text-sm text-gray-400 py-2">No open projects available</p>
+          class="w-full h-12 px-4 text-sm text-gray-900 bg-white border-2 border-gray-100 rounded-xl focus:border-gray-900 focus:ring-0 outline-none transition-colors appearance-none"
+        >
+          <option value="">None</option>
+          <option v-for="p in projectOptions" :key="p.value" :value="p.value">{{ p.label }}</option>
+        </select>
       </div>
 
       <!-- Amount -->
@@ -239,12 +239,12 @@
 </template>
 
 <script>
-import { createResource, toast, Select } from 'frappe-ui'
+import { createResource, toast } from 'frappe-ui'
 import { FeatherIcon } from 'frappe-ui'
 
 export default {
   name: 'NewClaim',
-  components: { FeatherIcon, Select },
+  components: { FeatherIcon },
   setup() {
     const settingsResource = createResource({
       url: 'claimsuite.api.get_claim_settings',
