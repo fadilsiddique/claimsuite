@@ -109,7 +109,6 @@ export default {
         { label: 'Submitted', value: 'submitted' },
         { label: 'Pending', value: 'pending' },
         { label: 'Paid', value: 'paid' },
-        { label: 'Cancelled', value: 'cancelled' },
       ],
     }
   },
