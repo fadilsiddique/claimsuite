@@ -149,34 +149,49 @@ export default {
 
     // Pull-to-refresh
     _ptrTouchStart(e) {
+      this._ptrActive = false
       if (this.$refs.mainContent?.scrollTop !== 0) return
-      // Ignore if inertia/momentum scroll just brought us to top
-      if (Date.now() - (this._lastScrollTime || 0) < 500) return
+      // Require 800ms of stillness so momentum scrolls landing at top don't arm PTR
+      if (Date.now() - (this._lastScrollTime || 0) < 800) return
       this._ptrStartY = e.touches[0].clientY
+      this._ptrLastY = e.touches[0].clientY
       this._ptrActive = true
     },
     _ptrTouchMove(e) {
       if (!this._ptrActive) return
-      const dy = e.touches[0].clientY - (this._ptrStartY || 0)
+      const currentY = e.touches[0].clientY
+      const dy = currentY - this._ptrStartY      // cumulative from start
+      const step = currentY - this._ptrLastY     // movement since last frame
 
-      // Cancel if pulling upward or content has scrolled away from top
-      if (dy <= 0 || this.$refs.mainContent?.scrollTop > 0) {
+      // Cancel if content scrolled away from top
+      if (this.$refs.mainContent?.scrollTop > 0) {
         this._ptrActive = false
         this.isPulling = false
         this.pullDistance = 0
         return
       }
 
-      // Dead zone before showing indicator
-      if (dy < 12) return
+      // Cancel if finger is moving upward or total pull is negative —
+      // this catches scroll gestures that start at the top
+      if (dy <= 0 || step < 0) {
+        this._ptrActive = false
+        this.isPulling = false
+        this.pullDistance = 0
+        return
+      }
+
+      this._ptrLastY = currentY
+
+      // Dead zone — require an intentional 30px pull before showing anything
+      if (dy < 30) return
 
       this.isPulling = true
-      this.pullDistance = Math.min((dy - 12) * 0.45, 80)
+      this.pullDistance = Math.min((dy - 30) * 0.5, 80)
     },
     _ptrTouchEnd() {
       if (!this._ptrActive) return
       this._ptrActive = false
-      if (this.pullDistance >= 55) {
+      if (this.pullDistance >= 60) {
         this.isRefreshing = true
         this.isPulling = false
         this.pullDistance = 0
