@@ -110,7 +110,7 @@ export default {
   methods: {
     parseRemark() {
       const remark = this.claim.user_remark || ''
-      const match = remark.match(/^Expense Claim - (.+?) - (.+?) - (.+)$/)
+      const match = remark.match(/^Expense Claim - (.+?) - (.*?) - (.+)$/)
       if (match) {
         return { type: match[1], description: match[2], date: match[3] }
       }
