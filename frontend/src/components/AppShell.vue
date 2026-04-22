@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col">
+  <div class="h-screen bg-gray-50 flex flex-col overflow-hidden" style="height: 100dvh">
     <TopBar
       :title="pageTitle"
       :show-back="showBack"
