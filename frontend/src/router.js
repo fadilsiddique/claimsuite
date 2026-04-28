@@ -25,6 +25,12 @@ const routes = [
     meta: { title: 'Claim Detail', showBack: true },
     component: () => import('@/pages/ClaimDetail.vue'),
   },
+  {
+    path: '/claims/:name/edit',
+    name: 'EditClaim',
+    meta: { title: 'Edit Claim', showBack: true },
+    component: () => import('@/pages/NewClaim.vue'),
+  },
 ]
 
 let router = createRouter({

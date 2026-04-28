@@ -2,8 +2,10 @@
   <div class="px-4 py-5">
     <!-- Header -->
     <div class="mb-6">
-      <h2 class="text-xl font-bold text-gray-900">Submit Expense</h2>
-      <p class="text-sm text-gray-500 mt-1">Fill in the details for your expense claim</p>
+      <h2 class="text-xl font-bold text-gray-900">{{ isEditMode ? 'Edit Expense' : 'Submit Expense' }}</h2>
+      <p class="text-sm text-gray-500 mt-1">
+        {{ isEditMode ? 'Update the details of your draft claim' : 'Fill in the details for your expense claim' }}
+      </p>
     </div>
 
     <!-- Form -->
@@ -228,11 +230,11 @@
     <div class="mt-6">
       <button
         class="btn-primary w-full h-12 text-base font-semibold rounded-xl text-white flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-        :disabled="submitResource.loading || !isFormValid || isUploading"
+        :disabled="isSaving || !isFormValid || isUploading || (isEditMode && detailResource.loading)"
         @click="handleSubmit"
       >
-        <span v-if="submitResource.loading" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
-        Submit Claim
+        <span v-if="isSaving" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+        {{ isEditMode ? 'Save Changes' : 'Submit Claim' }}
       </button>
     </div>
   </div>
@@ -265,7 +267,15 @@ export default {
       url: 'claimsuite.api.create_expense_claim',
     })
 
-    return { settingsResource, projectsResource, modesResource, submitResource }
+    const updateResource = createResource({
+      url: 'claimsuite.api.update_expense_claim',
+    })
+
+    const detailResource = createResource({
+      url: 'claimsuite.api.get_claim_detail',
+    })
+
+    return { settingsResource, projectsResource, modesResource, submitResource, updateResource, detailResource }
   },
   data() {
     return {
@@ -282,7 +292,18 @@ export default {
       isUploading: false,
     }
   },
+  mounted() {
+    if (this.isEditMode) {
+      this.loadExistingClaim()
+    }
+  },
   computed: {
+    isEditMode() {
+      return this.$route.name === 'EditClaim'
+    },
+    isSaving() {
+      return this.submitResource.loading || this.updateResource.loading
+    },
     claimTypes() {
       return this.settingsResource.data?.claim_types || []
     },
@@ -361,28 +382,84 @@ export default {
     removeFile() {
       this.uploadedFile = null
     },
+    async loadExistingClaim() {
+      const name = this.$route.params.name
+      if (!name) return
+      try {
+        await this.detailResource.submit({ name })
+        const claim = this.detailResource.data
+        if (!claim) return
+        if (claim.docstatus !== 0) {
+          toast.error('Only draft claims can be edited')
+          this.$router.replace(`/claims/${name}`)
+          return
+        }
+
+        // Parse claim_type & description from user_remark, format: "Expense Claim - <type> - <desc> - <date>"
+        let claimType = ''
+        let description = ''
+        const match = (claim.user_remark || '').match(/^Expense Claim - (.+?) - (.*?) - (.+)$/)
+        if (match) {
+          claimType = match[1]
+          description = match[2]
+        }
+
+        const debitRow = (claim.accounts || []).find(a => a.debit > 0)
+        const amount = debitRow?.debit || 0
+
+        this.form = {
+          claim_type: claimType,
+          payment_method: claim.payment_method || 'employee',
+          mode_of_payment: claim.mode_of_payment || '',
+          amount,
+          expense_date: claim.posting_date || new Date().toISOString().split('T')[0],
+          description,
+          project: claim.project || '',
+        }
+
+        const existingAttachment = (claim.attachments || [])[0]
+        if (existingAttachment) {
+          this.uploadedFile = {
+            file_url: existingAttachment.file_url,
+            file_name: existingAttachment.file_name,
+          }
+        }
+      } catch (err) {
+        toast.error('Could not load claim for editing')
+      }
+    },
     async handleSubmit() {
       if (!this.isFormValid) return
 
-      try {
-        await this.submitResource.submit({
-          claim_type: this.form.claim_type,
-          amount: this.form.amount,
-          expense_date: this.form.expense_date,
-          description: this.form.description,
-          file_url: this.uploadedFile?.file_url || '',
-          project: this.form.project || '',
-          payment_method: this.form.payment_method,
-          mode_of_payment: this.form.mode_of_payment || '',
-        })
+      const payload = {
+        claim_type: this.form.claim_type,
+        amount: this.form.amount,
+        expense_date: this.form.expense_date,
+        description: this.form.description,
+        file_url: this.uploadedFile?.file_url || '',
+        project: this.form.project || '',
+        payment_method: this.form.payment_method,
+        mode_of_payment: this.form.mode_of_payment || '',
+      }
 
-        const result = this.submitResource.data
+      const resource = this.isEditMode ? this.updateResource : this.submitResource
+      if (this.isEditMode) {
+        payload.name = this.$route.params.name
+      }
+
+      try {
+        await resource.submit(payload)
+        const result = resource.data
         if (result?.name) {
-          toast.success(`Claim submitted: ${this.form.claim_type} — AED ${this.formattedAmount}`)
+          if (this.isEditMode) {
+            toast.success(`Claim updated: ${this.form.claim_type} — AED ${this.formattedAmount}`)
+          } else {
+            toast.success(`Claim submitted: ${this.form.claim_type} — AED ${this.formattedAmount}`)
+          }
           this.$router.push(`/claims/${result.name}`)
         }
       } catch (err) {
-        const messages = this.submitResource.error?.messages
+        const messages = resource.error?.messages
         const errorMsg = messages?.length
           ? messages[0]
           : 'Something went wrong. Please try again.'
