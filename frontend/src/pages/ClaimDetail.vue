@@ -114,6 +114,16 @@
         </div>
       </div>
 
+      <!-- Edit (drafts only) -->
+      <button
+        v-if="claim.docstatus === 0"
+        @click="$router.push(`/claims/${claim.name}/edit`)"
+        class="flex items-center justify-center gap-2 w-full h-12 bg-gray-900 rounded-xl text-sm font-semibold text-white hover:bg-gray-800 transition-colors mb-3"
+      >
+        <FeatherIcon name="edit-2" class="w-4 h-4" />
+        Edit Claim
+      </button>
+
       <!-- Open in Desk -->
       <a
         :href="`/app/journal-entry/${claim.name}`"

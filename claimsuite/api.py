@@ -133,6 +133,92 @@ def create_expense_claim(claim_type, amount, expense_date, description="", file_
 
 
 @frappe.whitelist()
+def update_expense_claim(name, claim_type, amount, expense_date, description="", file_url="", project="", payment_method="employee", mode_of_payment=""):
+	je = frappe.get_doc("Journal Entry", name)
+
+	if je.owner != frappe.session.user:
+		frappe.throw(_("You don't have permission to edit this claim"))
+	if je.docstatus != 0:
+		frappe.throw(_("Only draft claims can be edited"))
+
+	amount = float(amount)
+	if amount <= 0:
+		frappe.throw(_("Amount must be greater than zero"))
+
+	settings = frappe.get_single("Claim Settings")
+
+	expense_account = None
+	for row in settings.account:
+		if row.claim_type == claim_type:
+			expense_account = row.account
+			break
+
+	if not expense_account:
+		frappe.throw(_("No account mapped for claim type: {0}").format(claim_type))
+
+	company = frappe.db.get_value("Account", expense_account, "company")
+
+	if payment_method == "company":
+		if not mode_of_payment:
+			frappe.throw(_("Please select a Mode of Payment"))
+		credit_account = frappe.db.get_value(
+			"Mode of Payment Account",
+			{"parent": mode_of_payment, "company": company},
+			"default_account",
+		)
+		if not credit_account:
+			frappe.throw(
+				_("No account configured for Mode of Payment '{0}' in company '{1}'").format(
+					mode_of_payment, company
+				)
+			)
+	else:
+		if not settings.default_payment_account:
+			frappe.throw(_("Default payment account not configured in Claim Settings"))
+		credit_account = settings.default_payment_account
+
+	je.posting_date = expense_date
+	je.company = company
+	je.user_remark = f"Expense Claim - {claim_type} - {description} - {expense_date}"
+
+	debit_row = {
+		"account": expense_account,
+		"debit_in_account_currency": amount,
+		"credit_in_account_currency": 0,
+	}
+	credit_row = {
+		"account": credit_account,
+		"debit_in_account_currency": 0,
+		"credit_in_account_currency": amount,
+	}
+	if project:
+		debit_row["project"] = project
+		credit_row["project"] = project
+
+	je.set("accounts", [debit_row, credit_row])
+	je.save()
+
+	if file_url:
+		existing = frappe.db.exists(
+			"File",
+			{
+				"file_url": file_url,
+				"attached_to_doctype": "Journal Entry",
+				"attached_to_name": je.name,
+			},
+		)
+		if not existing:
+			frappe.get_doc({
+				"doctype": "File",
+				"file_url": file_url,
+				"attached_to_doctype": "Journal Entry",
+				"attached_to_name": je.name,
+			}).save(ignore_permissions=True)
+
+	return {"name": je.name, "amount": amount, "claim_type": claim_type}
+
+
+@frappe.whitelist()
 def create_payment_journal(expense_journal, payable_account, payment_account, amount, posting_date, company):
 	"""Create a payment JE to reimburse the employee and link it back to the expense JE."""
 	amount = float(amount)
@@ -284,6 +370,25 @@ def get_claim_detail(name):
 			project_name = frappe.db.get_value("Project", project, "project_name") or project
 			break
 
+	# Extract credit account so the edit form can infer payment method / mode
+	credit_account = None
+	for row in je.accounts:
+		if row.credit_in_account_currency > 0:
+			credit_account = row.account
+			break
+
+	settings = frappe.get_single("Claim Settings")
+	payment_method = "company"
+	mode_of_payment = ""
+	if credit_account and credit_account == settings.default_payment_account:
+		payment_method = "employee"
+	elif credit_account:
+		mode_of_payment = frappe.db.get_value(
+			"Mode of Payment Account",
+			{"default_account": credit_account, "company": je.company},
+			"parent",
+		) or ""
+
 	return {
 		"name": je.name,
 		"posting_date": je.posting_date,
@@ -296,6 +401,8 @@ def get_claim_detail(name):
 		"project_name": project_name,
 		"payment_status": je.custom_payment_to_employee or "",
 		"payment_journal": je.custom_payment_journal or "",
+		"payment_method": payment_method,
+		"mode_of_payment": mode_of_payment,
 		"accounts": [
 			{
 				"account": row.account,
