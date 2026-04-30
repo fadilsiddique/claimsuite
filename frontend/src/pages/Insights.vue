@@ -1,10 +1,9 @@
 <template>
   <div class="insights-page pb-8">
     <!-- Hero Header -->
-    <div class="insights-header px-4 pt-20 pb-16 rounded-b-3xl">
+    <div class="insights-header px-4 pt-6 pb-16 rounded-b-3xl">
       <div class="mb-5">
-        <h2 class="text-2xl font-bold text-white">Insights</h2>
-        <p class="text-sm text-white/70 mt-1">{{ periodLabel }}</p>
+        <p class="text-sm text-white/70">{{ periodLabel }}</p>
       </div>
 
       <!-- Period Toggle -->
