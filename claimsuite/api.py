@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import add_months, get_first_day, get_last_day, getdate, today
 
 
 @frappe.whitelist()
@@ -412,4 +413,134 @@ def get_claim_detail(name):
 			for row in je.accounts
 		],
 		"attachments": attachments,
+	}
+
+
+def _period_window(period):
+	t = getdate(today())
+
+	if period == "month":
+		start = get_first_day(t)
+		end = get_last_day(t)
+		prev_anchor = add_months(t, -1)
+		prev_start = get_first_day(prev_anchor)
+		prev_end = get_last_day(prev_anchor)
+	elif period == "quarter":
+		q_start_month = ((t.month - 1) // 3) * 3 + 1
+		start = getdate(f"{t.year}-{q_start_month:02d}-01")
+		end = get_last_day(add_months(start, 2))
+		prev_start = add_months(start, -3)
+		prev_end = get_last_day(add_months(prev_start, 2))
+	elif period == "year":
+		start = getdate(f"{t.year}-01-01")
+		end = getdate(f"{t.year}-12-31")
+		prev_start = getdate(f"{t.year - 1}-01-01")
+		prev_end = getdate(f"{t.year - 1}-12-31")
+	else:
+		# "all" — no date filter, no prior comparison
+		return None, None, None, None
+
+	return start, end, prev_start, prev_end
+
+
+def _aggregate_claims(rows, default_payment_account):
+	by_type = {}
+	paid_by_me = {
+		"amount": 0.0, "count": 0,
+		"pending_amount": 0.0, "pending_count": 0,
+		"reimbursed_amount": 0.0, "reimbursed_count": 0,
+	}
+	paid_by_company = {"amount": 0.0, "count": 0}
+	total_amount = 0.0
+	claim_count = 0
+
+	for r in rows:
+		amount = float(r.get("total_debit") or 0)
+		total_amount += amount
+		claim_count += 1
+
+		try:
+			claim_type = (r.get("user_remark") or "").split(" - ")[1].strip() or "Other"
+		except IndexError:
+			claim_type = "Other"
+
+		bucket = by_type.setdefault(claim_type, {"amount": 0.0, "count": 0})
+		bucket["amount"] += amount
+		bucket["count"] += 1
+
+		if default_payment_account and r.get("credit_account") == default_payment_account:
+			paid_by_me["amount"] += amount
+			paid_by_me["count"] += 1
+			if (r.get("custom_payment_to_employee") or "") == "Paid":
+				paid_by_me["reimbursed_amount"] += amount
+				paid_by_me["reimbursed_count"] += 1
+			else:
+				paid_by_me["pending_amount"] += amount
+				paid_by_me["pending_count"] += 1
+		else:
+			paid_by_company["amount"] += amount
+			paid_by_company["count"] += 1
+
+	by_type_list = sorted(
+		[{"claim_type": k, **v} for k, v in by_type.items()],
+		key=lambda x: x["amount"],
+		reverse=True,
+	)
+
+	return {
+		"total_amount": total_amount,
+		"claim_count": claim_count,
+		"by_type": by_type_list,
+		"paid_by_me": paid_by_me,
+		"paid_by_company": paid_by_company,
+	}
+
+
+def _fetch_claim_rows(user, start, end):
+	params = {"user": user}
+	date_clause = ""
+	if start and end:
+		date_clause = "AND je.posting_date BETWEEN %(start)s AND %(end)s"
+		params["start"] = start
+		params["end"] = end
+
+	return frappe.db.sql(
+		f"""
+		SELECT je.name, je.total_debit, je.user_remark,
+		       je.custom_payment_to_employee, jea.account AS credit_account
+		FROM `tabJournal Entry` je
+		INNER JOIN `tabJournal Entry Account` jea ON jea.parent = je.name
+		WHERE je.voucher_type = 'Journal Entry'
+		  AND je.owner = %(user)s
+		  AND je.user_remark LIKE 'Expense Claim -%%'
+		  AND jea.credit_in_account_currency > 0
+		  {date_clause}
+		""",
+		params,
+		as_dict=True,
+	)
+
+
+@frappe.whitelist()
+def get_insights(period="month"):
+	user = frappe.session.user
+	settings = frappe.get_single("Claim Settings")
+	default_payment_account = settings.default_payment_account
+
+	start, end, prev_start, prev_end = _period_window(period)
+
+	rows = _fetch_claim_rows(user, start, end)
+	agg = _aggregate_claims(rows, default_payment_account)
+
+	prev_total_amount = None
+	if prev_start and prev_end:
+		prev_rows = _fetch_claim_rows(user, prev_start, prev_end)
+		prev_total_amount = sum(float(r.get("total_debit") or 0) for r in prev_rows)
+
+	return {
+		"period": period,
+		"start_date": start,
+		"end_date": end,
+		"prev_total_amount": prev_total_amount,
+		**agg,
 	}

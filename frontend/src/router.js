@@ -20,6 +20,12 @@ const routes = [
     component: () => import('@/pages/ClaimList.vue'),
   },
   {
+    path: '/insights',
+    name: 'Insights',
+    meta: { title: 'Insights' },
+    component: () => import('@/pages/Insights.vue'),
+  },
+  {
     path: '/claims/:name',
     name: 'ClaimDetail',
     meta: { title: 'Claim Detail', showBack: true },
