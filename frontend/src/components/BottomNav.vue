@@ -32,6 +32,7 @@ export default {
         { label: 'Home', icon: 'home', route: '/' },
         { label: 'New Claim', icon: 'plus-circle', route: '/new' },
         { label: 'Claims', icon: 'file-text', route: '/claims' },
+        { label: 'Insights', icon: 'bar-chart-2', route: '/insights' },
       ],
     }
   },
