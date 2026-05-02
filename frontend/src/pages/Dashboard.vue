@@ -1,32 +1,29 @@
 <template>
   <div class="dashboard-page">
-    <!-- Hero Header -->
-    <div class="dashboard-header px-4 pt-20 pb-16 rounded-b-3xl">
-      <div class="mb-5">
-        <h2 class="text-2xl font-bold text-white">
-          {{ greeting }}<span v-if="firstName">, {{ firstName }}</span>
-        </h2>
-        <p class="text-sm text-white/70 mt-1">{{ todayFormatted }}</p>
-      </div>
-
-      <!-- Summary Stats Row -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
-          <p class="text-xs font-medium text-white/70 mb-1">Total Claims</p>
-          <p class="text-2xl font-bold text-white tabular-nums">{{ stats?.total_claims ?? '—' }}</p>
-        </div>
-        <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
-          <p class="text-xs font-medium text-white/70 mb-1">Total Amount</p>
-          <p class="text-2xl font-bold text-white tabular-nums">
-            <span class="text-sm font-medium text-white/70">AED</span>
-            {{ stats ? formatCurrency(stats.total_amount) : '—' }}
-          </p>
-        </div>
-      </div>
+    <!-- Greeting -->
+    <div class="px-4 pt-4 mb-4">
+      <h2 class="text-xl font-bold text-gray-900">
+        {{ greeting }}<span v-if="firstName">, {{ firstName }}</span>
+      </h2>
+      <p class="text-xs text-gray-500 mt-0.5">{{ todayFormatted }}</p>
     </div>
 
-    <!-- Floating Stats Cards (overlapping the header) -->
-    <div class="px-4 -mt-6">
+    <!-- Reimbursement Card (replaces gradient hero) -->
+    <div class="px-4 mb-5">
+      <ReimbursementCard
+        v-if="stats"
+        :amount="stats.pending_amount || 0"
+        :count="stats.pending_count || 0"
+        :holder="userInfo?.full_name || ''"
+        :updated-at="new Date()"
+      />
+      <div
+        v-else
+        class="aspect-[1.586/1] max-w-md mx-auto rounded-2xl bg-gray-100 animate-pulse"
+      ></div>
+    </div>
+
+    <div class="px-4">
       <div v-if="stats" class="grid grid-cols-2 gap-3 mb-5">
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div class="flex items-center gap-3">
@@ -142,11 +139,12 @@ import { createResource } from 'frappe-ui'
 import { FeatherIcon } from 'frappe-ui'
 import ClaimCard from '@/components/ClaimCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import ReimbursementCard from '@/components/ReimbursementCard.vue'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'Dashboard',
-  components: { ClaimCard, EmptyState, FeatherIcon },
+  components: { ClaimCard, EmptyState, FeatherIcon, ReimbursementCard },
   setup() {
     const { userInfo } = useAuth()
 
@@ -204,9 +202,6 @@ export default {
 </script>
 
 <style scoped>
-.dashboard-header {
-  background: linear-gradient(135deg, #29A38B 0%, #1e8a74 100%);
-}
 .quick-action-btn {
   background: linear-gradient(135deg, #29A38B 0%, #1e8a74 100%);
   box-shadow: 0 8px 24px rgba(41, 163, 139, 0.3);

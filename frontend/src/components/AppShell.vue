@@ -3,10 +3,10 @@
     <TopBar
       :title="pageTitle"
       :show-back="showBack"
-      :show-brand="isDashboard && !scrolledPastHeader"
+      :show-brand="isDashboard"
       :show-avatar="!showBack"
       :user-image="userImage"
-      :transparent="isDashboard && !scrolledPastHeader"
+      :transparent="false"
       @avatar-click="showProfileMenu = true"
     />
 
@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto" style="overscroll-behavior-y: none" :class="{ '-mt-14': isDashboard }">
+    <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto" style="overscroll-behavior-y: none">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
