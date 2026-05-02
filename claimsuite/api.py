@@ -309,20 +309,7 @@ def get_dashboard_stats():
 
 	recent = all_claims[:5]
 
-	# Pending reimbursement: employee-paid claims (credit row = default_payment_account)
-	# that haven't been marked as paid back to the employee yet.
-	settings = frappe.get_single("Claim Settings")
-	pending_amount = 0
-	pending_count = 0
-	if settings.default_payment_account:
-		pending_rows = _fetch_claim_rows(user, None, None)
-		for r in pending_rows:
-			if (
-				r.get("credit_account") == settings.default_payment_account
-				and (r.get("custom_payment_to_employee") or "") != "Paid"
-			):
-				pending_amount += float(r.get("total_debit") or 0)
-				pending_count += 1
+	pending_amount, pending_count = get_pending_for_user(user)
 
 	return {
 		"total_claims": len(all_claims),
@@ -536,6 +523,29 @@ def _fetch_claim_rows(user, start, end):
 		params,
 		as_dict=True,
 	)
+
+
+def get_pending_for_user(user):
+	"""Return (amount, count) of pending reimbursements across all time for a given user.
+
+	Pending = employee-paid claims (credit row hits the default_payment_account)
+	that haven't been marked custom_payment_to_employee == "Paid" yet.
+	"""
+	settings = frappe.get_single("Claim Settings")
+	if not settings.default_payment_account:
+		return 0.0, 0
+
+	rows = _fetch_claim_rows(user, None, None)
+	amount = 0.0
+	count = 0
+	for r in rows:
+		if (
+			r.get("credit_account") == settings.default_payment_account
+			and (r.get("custom_payment_to_employee") or "") != "Paid"
+		):
+			amount += float(r.get("total_debit") or 0)
+			count += 1
+	return amount, count
 
 
 @frappe.whitelist()

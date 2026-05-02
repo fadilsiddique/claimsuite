@@ -51,10 +51,18 @@
             <p class="text-[9px] uppercase tracking-[0.2em] text-white/50">Claims</p>
             <p class="text-sm font-semibold tabular-nums">{{ count }}</p>
           </div>
-          <!-- QR placeholder (real Wallet QR slots in here later) -->
-          <div class="w-9 h-9 rounded bg-white/15 flex items-center justify-center">
-            <FeatherIcon name="maximize" class="w-3 h-3 text-white/50" />
-          </div>
+          <button
+            v-if="amount > 0"
+            type="button"
+            :disabled="savingToWallet"
+            @click="saveToWallet"
+            class="inline-flex items-center gap-1 bg-white/15 hover:bg-white/25
+                   active:scale-95 transition px-2 py-1 rounded-md
+                   text-[10px] font-medium disabled:opacity-60"
+          >
+            <FeatherIcon name="smartphone" class="w-3 h-3" />
+            {{ savingToWallet ? 'Loading…' : 'Add to Wallet' }}
+          </button>
         </div>
       </div>
     </div>
@@ -62,7 +70,7 @@
 </template>
 
 <script>
-import { FeatherIcon } from 'frappe-ui'
+import { FeatherIcon, createResource } from 'frappe-ui'
 
 export default {
   name: 'ReimbursementCard',
@@ -72,6 +80,32 @@ export default {
     count: { type: Number, required: true },
     holder: { type: String, default: '' },
     updatedAt: { type: [String, Date], default: () => new Date() },
+  },
+  data() {
+    return { savingToWallet: false }
+  },
+  setup() {
+    const walletJwt = createResource({
+      url: 'claimsuite.wallet.get_save_jwt',
+      auto: false,
+    })
+    return { walletJwt }
+  },
+  methods: {
+    async saveToWallet() {
+      if (this.savingToWallet) return
+      this.savingToWallet = true
+      try {
+        const res = await this.walletJwt.fetch()
+        if (res?.save_url) {
+          window.location.href = res.save_url
+        }
+      } catch (e) {
+        console.error('Wallet JWT fetch failed', e)
+      } finally {
+        this.savingToWallet = false
+      }
+    },
   },
   computed: {
     formattedAmount() {

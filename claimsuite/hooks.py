@@ -145,6 +145,12 @@ doctype_js = {"Journal Entry": "public/js/journal_entry.js"}
 # 	}
 # }
 
+doc_events = {
+	"Journal Entry": {
+		"on_update": "claimsuite.wallet.update_user_pass",
+	}
+}
+
 # Scheduled Tasks
 # ---------------
 
