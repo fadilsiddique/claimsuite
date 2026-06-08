@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "account",
+  "user_payment_accounts",
   "default_payment_account",
   "default_vat_account"
  ],
@@ -17,9 +18,15 @@
    "options": "Claim Account"
   },
   {
+   "fieldname": "user_payment_accounts",
+   "fieldtype": "Table",
+   "label": "User Payment Accounts",
+   "options": "Claim User Payment Account"
+  },
+  {
    "fieldname": "default_payment_account",
    "fieldtype": "Link",
-   "label": "Default Payment Account",
+   "label": "Default Payment Account (Fallback)",
    "options": "Account"
   },
   {
