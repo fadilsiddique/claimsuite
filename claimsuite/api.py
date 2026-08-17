@@ -1,6 +1,7 @@
 import frappe
+from erpnext.accounts.utils import get_balance_on
 from frappe import _
-from frappe.utils import add_months, get_first_day, get_last_day, getdate, today
+from frappe.utils import add_months, flt, get_first_day, get_last_day, getdate, today
 
 
 def get_payment_account_for_user(settings, user):
@@ -539,7 +540,7 @@ def _fetch_claim_rows(user, start, end):
 
 	return frappe.db.sql(
 		f"""
-		SELECT je.name, je.total_debit, je.user_remark,
+		SELECT je.name, je.total_debit, je.user_remark, je.docstatus,
 		       je.custom_payment_to_employee, jea.account AS credit_account
 		FROM `tabJournal Entry` je
 		INNER JOIN `tabJournal Entry Account` jea ON jea.parent = je.name
@@ -555,26 +556,44 @@ def _fetch_claim_rows(user, start, end):
 
 
 def get_pending_for_user(user):
-	"""Return (amount, count) of pending reimbursements across all time for a given user.
+	"""Return (amount, count) of pending reimbursement for a given user.
 
-	Pending = employee-paid claims (credit row hits one of the configured payment
-	accounts) that haven't been marked custom_payment_to_employee == "Paid" yet.
+	Amount is the outstanding general ledger balance of the user's payment
+	account — their mapped row in Claim Settings, else the global default. That
+	account is a liability, so its credit balance is what the company still owes
+	the employee, net of any payments already made against it.
+
+	Count is how many of the user's claims are booked to that same account and
+	haven't been marked custom_payment_to_employee == "Paid" yet.
 	"""
 	settings = frappe.get_single("Claim Settings")
-	payment_accounts = get_all_payment_accounts(settings)
-	if not payment_accounts:
+	account = get_payment_account_for_user(settings, user)
+	if not account:
 		return 0.0, 0
 
-	rows = _fetch_claim_rows(user, None, None)
-	amount = 0.0
+	# get_balance_on returns debit - credit, so a liability owed to the employee
+	# comes back negative. A debit balance means nothing is owed. in_account_currency
+	# is off so the figure stays in company currency, matching the claim amounts.
+	balance = -flt(
+		get_balance_on(
+			account=account,
+			in_account_currency=False,
+			ignore_account_permission=True,
+		)
+	)
+	amount = balance if balance > 0 else 0.0
+
+	# Only submitted claims reach the general ledger, so drafts are left out of
+	# the count too — otherwise it would not describe the same money as amount.
 	count = 0
-	for r in rows:
+	for r in _fetch_claim_rows(user, None, None):
 		if (
-			r.get("credit_account") in payment_accounts
+			r.get("docstatus") == 1
+			and r.get("credit_account") == account
 			and (r.get("custom_payment_to_employee") or "") != "Paid"
 		):
-			amount += float(r.get("total_debit") or 0)
 			count += 1
+
 	return amount, count
 
 

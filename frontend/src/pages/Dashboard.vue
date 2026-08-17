@@ -8,19 +8,15 @@
       <p class="text-xs text-gray-500 mt-0.5">{{ todayFormatted }}</p>
     </div>
 
-    <!-- Reimbursement Card (replaces gradient hero) -->
+    <!-- Pending reimbursement summary -->
     <div class="px-4 mb-5">
-      <ReimbursementCard
+      <PendingSummaryCard
         v-if="stats"
         :amount="stats.pending_amount || 0"
         :count="stats.pending_count || 0"
-        :holder="userInfo?.full_name || ''"
         :updated-at="new Date()"
       />
-      <div
-        v-else
-        class="aspect-[1.586/1] max-w-md mx-auto rounded-2xl bg-gray-100 animate-pulse"
-      ></div>
+      <div v-else class="h-[188px] rounded-3xl bg-gray-100 animate-pulse"></div>
     </div>
 
     <div class="px-4">
@@ -139,12 +135,12 @@ import { createResource } from 'frappe-ui'
 import { FeatherIcon } from 'frappe-ui'
 import ClaimCard from '@/components/ClaimCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import ReimbursementCard from '@/components/ReimbursementCard.vue'
+import PendingSummaryCard from '@/components/PendingSummaryCard.vue'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'Dashboard',
-  components: { ClaimCard, EmptyState, FeatherIcon, ReimbursementCard },
+  components: { ClaimCard, EmptyState, FeatherIcon, PendingSummaryCard },
   setup() {
     const { userInfo } = useAuth()
 
