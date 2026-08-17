@@ -362,16 +362,21 @@ def get_claims(status="all", start=0, limit=20):
 		"user_remark": ["like", "Expense Claim -%"],
 	}
 
-	if status == "draft":
-		filters["docstatus"] = 0
-	elif status == "submitted":
-		filters["docstatus"] = 1
-	elif status == "cancelled":
-		filters["docstatus"] = 2
+	# Claims are filtered by whether the employee has been paid back, not by
+	# document status. "Pending" has to allow for the field being unset.
+	or_filters = None
+	if status == "paid":
+		filters["custom_payment_to_employee"] = "Paid"
+	elif status == "pending":
+		or_filters = [
+			["custom_payment_to_employee", "is", "not set"],
+			["custom_payment_to_employee", "!=", "Paid"],
+		]
 
 	claims = frappe.get_all(
 		"Journal Entry",
 		filters=filters,
+		or_filters=or_filters,
 		fields=["name", "posting_date", "total_debit", "docstatus", "user_remark", "creation",
 				"custom_payment_to_employee", "custom_payment_journal"],
 		order_by="creation desc",

@@ -22,13 +22,6 @@
         <div class="flex items-center justify-center gap-2 mb-3">
           <span
             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-            :class="statusClass"
-          >
-            {{ statusLabel }}
-          </span>
-          <span
-            v-if="claim.docstatus === 1"
-            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
             :class="paymentStatusClass"
           >
             {{ paymentStatusLabel }}
@@ -62,7 +55,7 @@
             <span class="text-sm text-gray-500">Project</span>
             <span class="text-sm font-medium text-gray-900">{{ claim.project_name || claim.project }}</span>
           </div>
-          <div v-if="claim.docstatus === 1" class="flex items-center justify-between px-4 py-3.5">
+          <div class="flex items-center justify-between px-4 py-3.5">
             <span class="text-sm text-gray-500">Payment</span>
             <span
               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -179,16 +172,6 @@ export default {
       if (!this.claim?.posting_date) return ''
       const d = new Date(this.claim.posting_date)
       return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-    },
-    statusLabel() {
-      if (this.claim?.docstatus === 0) return 'Draft'
-      if (this.claim?.docstatus === 1) return 'Submitted'
-      return 'Cancelled'
-    },
-    statusClass() {
-      if (this.claim?.docstatus === 0) return 'bg-gray-100 text-gray-700'
-      if (this.claim?.docstatus === 1) return 'bg-blue-50 text-blue-700'
-      return 'bg-red-50 text-red-600'
     },
     paymentStatusLabel() {
       return this.claim?.payment_status === 'Paid' ? 'Paid' : 'Pending'

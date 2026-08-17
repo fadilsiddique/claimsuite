@@ -23,23 +23,23 @@
       <div v-if="stats" class="grid grid-cols-2 gap-3 mb-5">
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-50">
-              <FeatherIcon name="clock" class="w-5 h-5 text-amber-600" />
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 shrink-0">
+              <FeatherIcon name="file-text" class="w-5 h-5 text-blue-600" />
             </div>
-            <div>
-              <p class="text-xl font-bold text-gray-900 tabular-nums">{{ stats.draft_count }}</p>
-              <p class="text-xs text-gray-500">Pending</p>
+            <div class="min-w-0">
+              <p class="text-xl font-bold text-gray-900 tabular-nums">{{ stats.total_claims }}</p>
+              <p class="text-xs text-gray-500">Claims</p>
             </div>
           </div>
         </div>
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-green-50">
-              <FeatherIcon name="check-circle" class="w-5 h-5 text-green-600" />
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-teal-50 shrink-0">
+              <FeatherIcon name="trending-up" class="w-5 h-5 text-teal-700" />
             </div>
-            <div>
-              <p class="text-xl font-bold text-gray-900 tabular-nums">{{ stats.submitted_count }}</p>
-              <p class="text-xs text-gray-500">Approved</p>
+            <div class="min-w-0">
+              <p class="text-xl font-bold text-gray-900 tabular-nums truncate">{{ totalAmount }}</p>
+              <p class="text-xs text-gray-500">Total claimed</p>
             </div>
           </div>
         </div>
@@ -174,6 +174,12 @@ export default {
     },
     recentClaims() {
       return this.stats?.recent_claims || []
+    },
+    totalAmount() {
+      // No decimals: the tile is narrow and this is a glanceable figure
+      return Number(this.stats?.total_amount || 0).toLocaleString('en-AE', {
+        maximumFractionDigits: 0,
+      })
     },
     firstName() {
       const full = this.userInfo?.full_name || ''

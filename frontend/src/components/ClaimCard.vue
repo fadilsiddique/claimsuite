@@ -21,13 +21,6 @@
         <div class="flex items-center justify-end gap-1.5 mt-1">
           <span
             class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            :class="statusClass"
-          >
-            {{ statusLabel }}
-          </span>
-          <span
-            v-if="claim.docstatus === 1"
-            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
             :class="paymentStatusClass"
           >
             {{ paymentStatusLabel }}
@@ -71,11 +64,14 @@ export default {
     typeIcon() {
       return TYPE_ICONS[this.claimType] || 'file-text'
     },
+    isPaid() {
+      return this.claim.custom_payment_to_employee === 'Paid'
+    },
     typeIconBg() {
-      return this.claim.docstatus === 1 ? 'bg-green-50' : 'bg-gray-100'
+      return this.isPaid ? 'bg-green-50' : 'bg-gray-100'
     },
     typeIconColor() {
-      return this.claim.docstatus === 1 ? 'text-green-600' : 'text-gray-500'
+      return this.isPaid ? 'text-green-600' : 'text-gray-500'
     },
     formattedAmount() {
       return Number(this.claim.total_debit || 0).toLocaleString('en-AE', {
@@ -88,21 +84,11 @@ export default {
       const d = new Date(this.claim.posting_date)
       return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     },
-    statusLabel() {
-      if (this.claim.docstatus === 0) return 'Draft'
-      if (this.claim.docstatus === 1) return 'Submitted'
-      return 'Cancelled'
-    },
-    statusClass() {
-      if (this.claim.docstatus === 0) return 'bg-gray-100 text-gray-600'
-      if (this.claim.docstatus === 1) return 'bg-blue-50 text-blue-700'
-      return 'bg-red-50 text-red-600'
-    },
     paymentStatusLabel() {
-      return this.claim.custom_payment_to_employee === 'Paid' ? 'Paid' : 'Pending'
+      return this.isPaid ? 'Paid' : 'Pending'
     },
     paymentStatusClass() {
-      return this.claim.custom_payment_to_employee === 'Paid'
+      return this.isPaid
         ? 'bg-green-50 text-green-700'
         : 'bg-amber-50 text-amber-700'
     },
