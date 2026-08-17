@@ -3,7 +3,7 @@
     to="/claims"
     class="summary-card relative block overflow-hidden rounded-3xl p-5 text-white
            active:scale-[0.98] transition-transform duration-100"
-    :class="settled ? 'is-settled' : 'is-pending'"
+    :class="`is-${state}`"
   >
     <!-- Soft light -->
     <div class="absolute -top-24 -right-16 w-56 h-56 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
@@ -18,12 +18,12 @@
       >
         <span class="relative flex w-1.5 h-1.5">
           <span
-            v-if="!settled"
+            v-if="state !== 'settled'"
             class="absolute inline-flex w-full h-full rounded-full bg-white opacity-70 animate-ping"
           ></span>
           <span class="relative inline-flex w-1.5 h-1.5 rounded-full bg-white"></span>
         </span>
-        {{ settled ? 'All settled' : 'Awaiting payout' }}
+        {{ badge }}
       </span>
 
       <span class="flex items-center justify-center w-7 h-7 rounded-full bg-white/15 shrink-0">
@@ -34,7 +34,7 @@
     <!-- Amount -->
     <div class="relative mt-5">
       <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-white/60">
-        Pending reimbursement
+        {{ label }}
       </p>
       <p class="mt-1.5 flex items-baseline gap-1.5 leading-none">
         <span class="text-sm font-semibold text-white/70">AED</span>
@@ -45,13 +45,13 @@
     <!-- Footer facts -->
     <div class="relative mt-5 pt-3.5 border-t border-white/15 flex items-center gap-5">
       <div class="flex items-center gap-2 min-w-0">
-        <FeatherIcon :name="settled ? 'check-circle' : 'file-text'" class="w-4 h-4 text-white/60 shrink-0" />
+        <FeatherIcon :name="footerIcon" class="w-4 h-4 text-white/60 shrink-0" />
         <p class="text-xs text-white/80 truncate">
-          <template v-if="settled">Nothing awaiting payout</template>
-          <template v-else>
+          <template v-if="state === 'pending'">
             <span class="font-semibold tabular-nums">{{ count }}</span>
             {{ count === 1 ? 'claim' : 'claims' }} in queue
           </template>
+          <template v-else>{{ footerText }}</template>
         </p>
       </div>
       <div class="flex items-center gap-2 min-w-0 ml-auto">
@@ -74,11 +74,31 @@ export default {
     updatedAt: { type: [String, Date], default: () => new Date() },
   },
   computed: {
-    settled() {
-      return !this.amount
+    // amount is the ledger position: positive means the company owes the
+    // employee, negative means the employee owes the company back.
+    state() {
+      if (this.amount > 0) return 'pending'
+      if (this.amount < 0) return 'due'
+      return 'settled'
+    },
+    badge() {
+      return { pending: 'Awaiting payout', due: 'Balance due', settled: 'All settled' }[this.state]
+    },
+    label() {
+      return {
+        pending: 'Pending reimbursement',
+        due: 'You owe the company',
+        settled: 'Pending reimbursement',
+      }[this.state]
+    },
+    footerIcon() {
+      return { pending: 'file-text', due: 'alert-circle', settled: 'check-circle' }[this.state]
+    },
+    footerText() {
+      return this.state === 'due' ? 'Settle with finance' : 'Nothing awaiting payout'
     },
     formattedAmount() {
-      return Number(this.amount || 0).toLocaleString('en-AE', {
+      return Math.abs(Number(this.amount || 0)).toLocaleString('en-AE', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })
@@ -100,6 +120,12 @@ export default {
 .summary-card.is-settled {
   background: linear-gradient(135deg, #3c4a56 0%, #2b363f 55%, #1b232a 100%);
   box-shadow: 0 12px 32px -10px rgba(27, 35, 42, 0.5);
+}
+
+/* Employee owes the company back — warm, needs attention, not an error */
+.summary-card.is-due {
+  background: linear-gradient(135deg, #e0913a 0%, #c9702a 50%, #8f4715 100%);
+  box-shadow: 0 12px 32px -10px rgba(143, 71, 21, 0.5);
 }
 
 /* Diagonal gloss sweeping across the face */

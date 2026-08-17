@@ -1,5 +1,4 @@
 import frappe
-from erpnext.accounts.utils import get_balance_on
 from frappe import _
 from frappe.utils import add_months, flt, get_first_day, get_last_day, getdate, today
 
@@ -556,35 +555,43 @@ def _fetch_claim_rows(user, start, end):
 
 
 def get_pending_for_user(user):
-	"""Return (amount, count) of pending reimbursement for a given user.
+	"""Return (amount, count) describing the user's reimbursement position.
 
-	Amount is the outstanding general ledger balance of the user's payment
-	account — their mapped row in Claim Settings, else the global default. That
-	account is a liability, so its credit balance is what the company still owes
-	the employee, net of any payments already made against it.
+	Amount comes from the general ledger balance of the user's payment account —
+	their mapped row in Claim Settings, else the global default — movements only,
+	with opening entries excluded. The sign carries the direction:
 
-	Count is how many of the user's claims are booked to that same account and
-	haven't been marked custom_payment_to_employee == "Paid" yet.
+	    amount > 0   the company owes the employee this much (credit balance)
+	    amount < 0   the employee owes the company this much (debit balance)
+	    amount == 0  settled
+
+	Count is how many of the user's submitted claims are booked to that same
+	account and haven't been marked custom_payment_to_employee == "Paid" yet.
+	Drafts are excluded because they never reach the ledger.
 	"""
 	settings = frappe.get_single("Claim Settings")
 	account = get_payment_account_for_user(settings, user)
 	if not account:
 		return 0.0, 0
 
-	# get_balance_on returns debit - credit, so a liability owed to the employee
-	# comes back negative. A debit balance means nothing is owed. in_account_currency
-	# is off so the figure stays in company currency, matching the claim amounts.
-	balance = -flt(
-		get_balance_on(
-			account=account,
-			in_account_currency=False,
-			ignore_account_permission=True,
-		)
-	)
-	amount = balance if balance > 0 else 0.0
+	balance = frappe.db.sql(
+		"""
+		SELECT sum(gle.debit) - sum(gle.credit)
+		FROM `tabGL Entry` gle
+		WHERE gle.account = %(account)s
+		  AND gle.is_cancelled = 0
+		  AND ifnull(gle.is_opening, 'No') = 'No'
+		""",
+		{"account": account},
+	)[0][0]
 
-	# Only submitted claims reach the general ledger, so drafts are left out of
-	# the count too — otherwise it would not describe the same money as amount.
+	# The ledger stores debit - credit, so money owed to the employee sits there
+	# as a credit and comes back negative. Flip it so a positive amount reads as
+	# owed to them, which is the direction the card leads with.
+	amount = -flt(balance)
+	if amount == 0:
+		amount = 0.0  # negating a zero balance otherwise yields -0.0
+
 	count = 0
 	for r in _fetch_claim_rows(user, None, None):
 		if (
