@@ -1,59 +1,53 @@
 <template>
   <div class="dashboard-page">
-    <!-- Hero Header -->
-    <div class="dashboard-header px-4 pt-20 pb-16 rounded-b-3xl">
-      <div class="mb-5">
-        <h2 class="text-2xl font-bold text-white">
-          {{ greeting }}<span v-if="firstName">, {{ firstName }}</span>
-        </h2>
-        <p class="text-sm text-white/70 mt-1">{{ todayFormatted }}</p>
-      </div>
-
-      <!-- Summary Stats Row -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
-          <p class="text-xs font-medium text-white/70 mb-1">Total Claims</p>
-          <p class="text-2xl font-bold text-white tabular-nums">{{ stats?.total_claims ?? '—' }}</p>
-        </div>
-        <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
-          <p class="text-xs font-medium text-white/70 mb-1">Total Amount</p>
-          <p class="text-2xl font-bold text-white tabular-nums">
-            <span class="text-sm font-medium text-white/70">AED</span>
-            {{ stats ? formatCurrency(stats.total_amount) : '—' }}
-          </p>
-        </div>
-      </div>
+    <!-- Greeting -->
+    <div class="px-4 pt-4 mb-4">
+      <h2 class="text-xl font-bold text-gray-900">
+        {{ greeting }}<span v-if="firstName">, {{ firstName }}</span>
+      </h2>
+      <p class="text-xs text-gray-500 mt-0.5">{{ todayFormatted }}</p>
     </div>
 
-    <!-- Floating Stats Cards (overlapping the header) -->
-    <div class="px-4 -mt-6">
-      <div v-if="stats" class="grid grid-cols-2 gap-3 mb-5">
+    <!-- Hero row: summary card beside the tiles + primary action on desktop -->
+    <div class="px-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
+      <div class="mb-5 lg:mb-0 lg:col-span-2">
+        <PendingSummaryCard
+          v-if="stats"
+          :amount="stats.pending_amount || 0"
+          :count="stats.pending_count || 0"
+          :updated-at="new Date()"
+        />
+        <div v-else class="h-[188px] rounded-3xl bg-gray-100 animate-pulse"></div>
+      </div>
+
+      <div class="lg:col-span-1">
+      <div v-if="stats" class="grid grid-cols-2 gap-3 mb-5 lg:grid-cols-1 lg:mb-3">
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-50">
-              <FeatherIcon name="clock" class="w-5 h-5 text-amber-600" />
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 shrink-0">
+              <FeatherIcon name="file-text" class="w-5 h-5 text-blue-600" />
             </div>
-            <div>
-              <p class="text-xl font-bold text-gray-900 tabular-nums">{{ stats.draft_count }}</p>
-              <p class="text-xs text-gray-500">Pending</p>
+            <div class="min-w-0">
+              <p class="text-xl font-bold text-gray-900 tabular-nums">{{ stats.total_claims }}</p>
+              <p class="text-xs text-gray-500">Claims</p>
             </div>
           </div>
         </div>
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-green-50">
-              <FeatherIcon name="check-circle" class="w-5 h-5 text-green-600" />
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-teal-50 shrink-0">
+              <FeatherIcon name="trending-up" class="w-5 h-5 text-teal-700" />
             </div>
-            <div>
-              <p class="text-xl font-bold text-gray-900 tabular-nums">{{ stats.submitted_count }}</p>
-              <p class="text-xs text-gray-500">Approved</p>
+            <div class="min-w-0">
+              <p class="text-xl font-bold text-gray-900 tabular-nums truncate">{{ totalAmount }}</p>
+              <p class="text-xs text-gray-500">Total claimed</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Stats Skeleton -->
-      <div v-else class="grid grid-cols-2 gap-3 mb-5">
+      <div v-else class="grid grid-cols-2 gap-3 mb-5 lg:grid-cols-1 lg:mb-3">
         <div v-for="i in 2" :key="i" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-pulse">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gray-100"></div>
@@ -68,7 +62,7 @@
       <!-- Quick Action -->
       <router-link
         to="/new"
-        class="quick-action-btn flex items-center gap-4 text-white rounded-2xl p-5 mb-6 active:scale-[0.98] transition-all duration-100 shadow-lg"
+        class="quick-action-btn flex items-center gap-4 text-white rounded-2xl p-5 mb-6 active:scale-[0.98] transition-all duration-100 shadow-lg lg:mb-0 lg:hover:brightness-105"
       >
         <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20">
           <FeatherIcon name="plus" class="w-6 h-6" />
@@ -79,7 +73,10 @@
         </div>
         <FeatherIcon name="chevron-right" class="w-5 h-5 text-white/60 ml-auto" />
       </router-link>
+      </div>
+    </div>
 
+    <div class="px-4 lg:mt-6">
       <!-- Recent Claims -->
       <div class="mb-4">
         <div class="flex items-center justify-between mb-3">
@@ -92,7 +89,7 @@
           </router-link>
         </div>
 
-        <div v-if="statsResource.loading && !stats" class="space-y-3">
+        <div v-if="statsResource.loading && !stats" class="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
           <div
             v-for="i in 3"
             :key="i"
@@ -109,7 +106,7 @@
           </div>
         </div>
 
-        <div v-else-if="recentClaims.length" class="space-y-3">
+        <div v-else-if="recentClaims.length" class="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
           <ClaimCard
             v-for="claim in recentClaims"
             :key="claim.name"
@@ -142,11 +139,12 @@ import { createResource } from 'frappe-ui'
 import { FeatherIcon } from 'frappe-ui'
 import ClaimCard from '@/components/ClaimCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import PendingSummaryCard from '@/components/PendingSummaryCard.vue'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'Dashboard',
-  components: { ClaimCard, EmptyState, FeatherIcon },
+  components: { ClaimCard, EmptyState, FeatherIcon, PendingSummaryCard },
   setup() {
     const { userInfo } = useAuth()
 
@@ -181,6 +179,12 @@ export default {
     recentClaims() {
       return this.stats?.recent_claims || []
     },
+    totalAmount() {
+      // No decimals: the tile is narrow and this is a glanceable figure
+      return Number(this.stats?.total_amount || 0).toLocaleString('en-AE', {
+        maximumFractionDigits: 0,
+      })
+    },
     firstName() {
       const full = this.userInfo?.full_name || ''
       return full.split(' ')[0]
@@ -204,9 +208,6 @@ export default {
 </script>
 
 <style scoped>
-.dashboard-header {
-  background: linear-gradient(135deg, #29A38B 0%, #1e8a74 100%);
-}
 .quick-action-btn {
   background: linear-gradient(135deg, #29A38B 0%, #1e8a74 100%);
   box-shadow: 0 8px 24px rgba(41, 163, 139, 0.3);

@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-5">
+  <div class="px-4 py-5 lg:py-8 lg:max-w-2xl lg:mx-auto">
     <!-- Header -->
     <div class="mb-6">
       <h2 class="text-xl font-bold text-gray-900">{{ isEditMode ? 'Edit Expense' : 'Submit Expense' }}</h2>

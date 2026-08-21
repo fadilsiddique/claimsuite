@@ -14,7 +14,7 @@
         </button>
         <div
           v-if="showBrand && !showBack"
-          class="w-7 h-7 rounded-lg overflow-hidden bg-white shadow-sm shrink-0"
+          class="w-7 h-7 rounded-lg overflow-hidden bg-white shadow-sm shrink-0 lg:hidden"
         >
           <img
             :src="'/assets/claimsuite/frontend/icon-source.png'"
@@ -29,7 +29,7 @@
         <button
           v-if="showAvatar"
           @click="$emit('avatar-click')"
-          class="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden ring-2"
+          class="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden ring-2 lg:hidden"
           :class="transparent ? 'bg-white/20 ring-white/20' : 'bg-gray-100 ring-gray-50'"
         >
           <img

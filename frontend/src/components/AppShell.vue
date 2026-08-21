@@ -1,14 +1,36 @@
 <template>
-  <div class="h-screen bg-gray-50 flex flex-col overflow-hidden" style="height: 100dvh">
+  <div class="h-screen bg-gray-50 flex flex-col overflow-hidden lg:flex-row" style="height: 100dvh">
+    <SideNav
+      class="hidden lg:flex"
+      :user-image="userImage"
+      :full-name="fullName"
+      :user-email="userEmail"
+      @profile-click="showProfileMenu = true"
+    />
+
+    <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
     <TopBar
       :title="pageTitle"
       :show-back="showBack"
-      :show-brand="isDashboard && !scrolledPastHeader"
+      :show-brand="isDashboard"
       :show-avatar="!showBack"
       :user-image="userImage"
-      :transparent="isDashboard && !scrolledPastHeader"
+      :transparent="false"
       @avatar-click="showProfileMenu = true"
-    />
+    >
+      <template #actions>
+        <!-- Desktop has no pull-to-refresh, so give it a button -->
+        <button
+          type="button"
+          @click="triggerRefresh"
+          title="Refresh"
+          class="hidden lg:flex items-center justify-center w-9 h-9 rounded-xl text-gray-500
+                 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        >
+          <FeatherIcon name="refresh-cw" class="w-4 h-4" />
+        </button>
+      </template>
+    </TopBar>
 
     <!-- Pull-to-refresh indicator (fixed, below top bar) -->
     <div class="fixed left-0 right-0 z-20 flex justify-center pointer-events-none" style="top: 56px">
@@ -32,13 +54,17 @@
       </div>
     </div>
 
-    <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto" style="overscroll-behavior-y: none" :class="{ '-mt-14': isDashboard }">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+    <main ref="mainContent" class="flex-1 pb-24 overflow-y-auto lg:pb-10" style="overscroll-behavior-y: none">
+      <div class="w-full lg:max-w-5xl lg:mx-auto">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
     </main>
+    </div>
+
     <InstallPrompt />
     <BottomNav />
 
@@ -79,13 +105,14 @@
 <script>
 import TopBar from './TopBar.vue'
 import BottomNav from './BottomNav.vue'
+import SideNav from './SideNav.vue'
 import InstallPrompt from './InstallPrompt.vue'
 import { Dialog, FeatherIcon, Button } from 'frappe-ui'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'AppShell',
-  components: { TopBar, BottomNav, InstallPrompt, Dialog, FeatherIcon, Button },
+  components: { TopBar, BottomNav, SideNav, InstallPrompt, Dialog, FeatherIcon, Button },
   setup() {
     const { userInfo, user, logout } = useAuth()
     return { userInfo, user, logout }
@@ -145,6 +172,9 @@ export default {
     handleLogout() {
       this.showProfileMenu = false
       this.logout()
+    },
+    triggerRefresh() {
+      window.dispatchEvent(new Event('app:refresh'))
     },
 
     // Pull-to-refresh

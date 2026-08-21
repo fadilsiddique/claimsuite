@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-5">
+  <div class="px-4 py-5 lg:py-8 lg:max-w-3xl lg:mx-auto">
     <!-- Loading -->
     <div v-if="detailResource.loading && !claim" class="space-y-4">
       <div class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
@@ -21,13 +21,6 @@
       <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mb-4 text-center">
         <div class="flex items-center justify-center gap-2 mb-3">
           <span
-            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-            :class="statusClass"
-          >
-            {{ statusLabel }}
-          </span>
-          <span
-            v-if="claim.docstatus === 1"
             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
             :class="paymentStatusClass"
           >
@@ -62,7 +55,7 @@
             <span class="text-sm text-gray-500">Project</span>
             <span class="text-sm font-medium text-gray-900">{{ claim.project_name || claim.project }}</span>
           </div>
-          <div v-if="claim.docstatus === 1" class="flex items-center justify-between px-4 py-3.5">
+          <div class="flex items-center justify-between px-4 py-3.5">
             <span class="text-sm text-gray-500">Payment</span>
             <span
               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -114,25 +107,28 @@
         </div>
       </div>
 
-      <!-- Edit (drafts only) -->
-      <button
-        v-if="claim.docstatus === 0"
-        @click="$router.push(`/claims/${claim.name}/edit`)"
-        class="flex items-center justify-center gap-2 w-full h-12 bg-gray-900 rounded-xl text-sm font-semibold text-white hover:bg-gray-800 transition-colors mb-3"
-      >
-        <FeatherIcon name="edit-2" class="w-4 h-4" />
-        Edit Claim
-      </button>
+      <!-- Actions: stacked on mobile, side by side on desktop -->
+      <div class="lg:flex lg:gap-3">
+        <!-- Edit (drafts only) -->
+        <button
+          v-if="claim.docstatus === 0"
+          @click="$router.push(`/claims/${claim.name}/edit`)"
+          class="flex items-center justify-center gap-2 w-full h-12 bg-gray-900 rounded-xl text-sm font-semibold text-white hover:bg-gray-800 transition-colors mb-3 lg:mb-0 lg:flex-1"
+        >
+          <FeatherIcon name="edit-2" class="w-4 h-4" />
+          Edit Claim
+        </button>
 
-      <!-- Open in Desk -->
-      <a
-        :href="`/app/journal-entry/${claim.name}`"
-        target="_blank"
-        class="flex items-center justify-center gap-2 w-full h-12 bg-white border-2 border-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        <FeatherIcon name="external-link" class="w-4 h-4" />
-        Open in Desk
-      </a>
+        <!-- Open in Desk -->
+        <a
+          :href="`/app/journal-entry/${claim.name}`"
+          target="_blank"
+          class="flex items-center justify-center gap-2 w-full h-12 bg-white border-2 border-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors lg:flex-1"
+        >
+          <FeatherIcon name="external-link" class="w-4 h-4" />
+          Open in Desk
+        </a>
+      </div>
     </template>
 
     <!-- Error -->
@@ -179,16 +175,6 @@ export default {
       if (!this.claim?.posting_date) return ''
       const d = new Date(this.claim.posting_date)
       return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-    },
-    statusLabel() {
-      if (this.claim?.docstatus === 0) return 'Draft'
-      if (this.claim?.docstatus === 1) return 'Submitted'
-      return 'Cancelled'
-    },
-    statusClass() {
-      if (this.claim?.docstatus === 0) return 'bg-gray-100 text-gray-700'
-      if (this.claim?.docstatus === 1) return 'bg-blue-50 text-blue-700'
-      return 'bg-red-50 text-red-600'
     },
     paymentStatusLabel() {
       return this.claim?.payment_status === 'Paid' ? 'Paid' : 'Pending'

@@ -1,14 +1,46 @@
 <template>
   <div class="insights-page pb-8">
-    <!-- Hero Header -->
-    <div class="insights-header px-4 pt-20 pb-16 rounded-b-3xl">
+    <!-- Hero Header (greeting + period totals) -->
+    <div class="insights-header px-4 pt-6 pb-16 rounded-b-3xl">
       <div class="mb-5">
-        <h2 class="text-2xl font-bold text-white">Insights</h2>
-        <p class="text-sm text-white/70 mt-1">{{ periodLabel }}</p>
+        <h2 class="text-2xl font-bold text-white">
+          {{ greeting }}<span v-if="firstName">, {{ firstName }}</span>
+        </h2>
+        <p class="text-sm text-white/70 mt-1">{{ todayFormatted }}</p>
+      </div>
+
+      <!-- Summary Stats Row (period-scoped) -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
+          <p class="text-xs font-medium text-white/70 mb-1">Total Claims</p>
+          <p class="text-2xl font-bold text-white tabular-nums">
+            {{ insights ? insights.claim_count : '—' }}
+          </p>
+        </div>
+        <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
+          <p class="text-xs font-medium text-white/70 mb-1">Total Amount</p>
+          <p class="text-2xl font-bold text-white tabular-nums">
+            <span class="text-sm font-medium text-white/70">AED</span>
+            {{ insights ? formatCurrency(insights.total_amount) : '—' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Delta vs prev period -->
+      <div v-if="deltaPct !== null" class="flex items-center gap-1.5 text-xs mb-4">
+        <FeatherIcon
+          :name="deltaPct >= 0 ? 'trending-up' : 'trending-down'"
+          class="w-3.5 h-3.5"
+          :class="deltaPct >= 0 ? 'text-emerald-200' : 'text-rose-200'"
+        />
+        <span :class="deltaPct >= 0 ? 'text-emerald-200' : 'text-rose-200'" class="font-semibold">
+          {{ deltaPct >= 0 ? '+' : '' }}{{ deltaPct.toFixed(0) }}%
+        </span>
+        <span class="text-white/70">vs previous {{ period }}</span>
       </div>
 
       <!-- Period Toggle -->
-      <div class="flex bg-white/15 backdrop-blur-sm rounded-2xl p-1 mb-5">
+      <div class="flex bg-white/15 backdrop-blur-sm rounded-2xl p-1">
         <button
           v-for="opt in periodOptions"
           :key="opt.value"
@@ -21,30 +53,6 @@
         >
           {{ opt.label }}
         </button>
-      </div>
-
-      <!-- Total + Delta -->
-      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4">
-        <p class="text-xs font-medium text-white/70 mb-1">Total spend</p>
-        <p class="text-3xl font-bold text-white tabular-nums">
-          <span class="text-base font-medium text-white/70">AED</span>
-          {{ insights ? formatCurrency(insights.total_amount) : '—' }}
-        </p>
-        <div class="flex items-center gap-2 mt-2 text-xs text-white/80">
-          <span class="tabular-nums">{{ insights ? insights.claim_count : 0 }} claims</span>
-          <span v-if="deltaPct !== null" class="flex items-center gap-1">
-            <span class="text-white/50">·</span>
-            <FeatherIcon
-              :name="deltaPct >= 0 ? 'trending-up' : 'trending-down'"
-              class="w-3.5 h-3.5"
-              :class="deltaPct >= 0 ? 'text-emerald-200' : 'text-rose-200'"
-            />
-            <span :class="deltaPct >= 0 ? 'text-emerald-200' : 'text-rose-200'">
-              {{ deltaPct >= 0 ? '+' : '' }}{{ deltaPct.toFixed(0) }}%
-            </span>
-            <span class="text-white/60">vs prev {{ period }}</span>
-          </span>
-        </div>
       </div>
     </div>
 
@@ -222,6 +230,7 @@
 <script>
 import { createResource, FeatherIcon } from 'frappe-ui'
 import EmptyState from '@/components/EmptyState.vue'
+import { useAuth } from '@/composables/useAuth'
 
 const PALETTE = ['#29A38B', '#f59e0b', '#6366f1', '#f43f5e', '#0ea5e9']
 const DONUT_SIZE = 180
@@ -269,7 +278,8 @@ export default {
       params: { period: 'month' },
       auto: true,
     })
-    return { insightsResource }
+    const { userInfo } = useAuth()
+    return { insightsResource, userInfo }
   },
   mounted() {
     window.addEventListener('app:refresh', this._onRefresh)
@@ -280,6 +290,24 @@ export default {
   computed: {
     insights() {
       return this.insightsResource.data
+    },
+    firstName() {
+      const full = this.userInfo?.full_name || ''
+      return full.split(' ')[0]
+    },
+    greeting() {
+      const hour = new Date().getHours()
+      if (hour < 12) return 'Good morning'
+      if (hour < 17) return 'Good afternoon'
+      return 'Good evening'
+    },
+    todayFormatted() {
+      return new Date().toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
     },
     periodLabel() {
       const map = {

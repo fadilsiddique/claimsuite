@@ -1,6 +1,34 @@
 import frappe
 from frappe import _
-from frappe.utils import add_months, get_first_day, get_last_day, getdate, today
+from frappe.utils import add_months, flt, get_first_day, get_last_day, getdate, today
+
+
+def get_payment_account_for_user(settings, user):
+	"""Resolve the payment (liability) account for a given user.
+
+	Returns the user's mapped account from the user_payment_accounts table,
+	falling back to the global default_payment_account when no row matches.
+	"""
+	for row in settings.user_payment_accounts:
+		if row.user == user:
+			return row.payment_account
+	return settings.default_payment_account
+
+
+def get_all_payment_accounts(settings):
+	"""Return the set of every account treated as an employee-paid (payment) account.
+
+	Used for reverse lookups where we only know a Journal Entry's credit account
+	and need to decide whether it represents an employee reimbursement liability.
+	"""
+	accounts = {
+		row.payment_account
+		for row in settings.user_payment_accounts
+		if row.payment_account
+	}
+	if settings.default_payment_account:
+		accounts.add(settings.default_payment_account)
+	return accounts
 
 
 @frappe.whitelist()
@@ -34,7 +62,8 @@ def get_projects():
 @frappe.whitelist()
 def get_modes_of_payment():
 	settings = frappe.get_single("Claim Settings")
-	company = frappe.db.get_value("Account", settings.default_payment_account, "company")
+	payment_account = get_payment_account_for_user(settings, frappe.session.user)
+	company = frappe.db.get_value("Account", payment_account, "company")
 
 	modes = frappe.get_all(
 		"Mode of Payment",
@@ -91,9 +120,9 @@ def create_expense_claim(claim_type, amount, expense_date, description="", file_
 				)
 			)
 	else:
-		if not settings.default_payment_account:
-			frappe.throw(_("Default payment account not configured in Claim Settings"))
-		credit_account = settings.default_payment_account
+		credit_account = get_payment_account_for_user(settings, frappe.session.user)
+		if not credit_account:
+			frappe.throw(_("No payment account configured for this user in Claim Settings"))
 
 	remark = f"Expense Claim - {claim_type} - {description} - {expense_date}"
 
@@ -174,9 +203,9 @@ def update_expense_claim(name, claim_type, amount, expense_date, description="",
 				)
 			)
 	else:
-		if not settings.default_payment_account:
-			frappe.throw(_("Default payment account not configured in Claim Settings"))
-		credit_account = settings.default_payment_account
+		credit_account = get_payment_account_for_user(settings, je.owner)
+		if not credit_account:
+			frappe.throw(_("No payment account configured for this user in Claim Settings"))
 
 	je.posting_date = expense_date
 	je.company = company
@@ -309,12 +338,16 @@ def get_dashboard_stats():
 
 	recent = all_claims[:5]
 
+	pending_amount, pending_count = get_pending_for_user(user)
+
 	return {
 		"total_claims": len(all_claims),
 		"total_amount": total_amount,
 		"draft_count": draft_count,
 		"submitted_count": submitted_count,
 		"cancelled_count": cancelled_count,
+		"pending_amount": pending_amount,
+		"pending_count": pending_count,
 		"recent_claims": recent,
 	}
 
@@ -329,16 +362,21 @@ def get_claims(status="all", start=0, limit=20):
 		"user_remark": ["like", "Expense Claim -%"],
 	}
 
-	if status == "draft":
-		filters["docstatus"] = 0
-	elif status == "submitted":
-		filters["docstatus"] = 1
-	elif status == "cancelled":
-		filters["docstatus"] = 2
+	# Claims are filtered by whether the employee has been paid back, not by
+	# document status. "Pending" has to allow for the field being unset.
+	or_filters = None
+	if status == "paid":
+		filters["custom_payment_to_employee"] = "Paid"
+	elif status == "pending":
+		or_filters = [
+			["custom_payment_to_employee", "is", "not set"],
+			["custom_payment_to_employee", "!=", "Paid"],
+		]
 
 	claims = frappe.get_all(
 		"Journal Entry",
 		filters=filters,
+		or_filters=or_filters,
 		fields=["name", "posting_date", "total_debit", "docstatus", "user_remark", "creation",
 				"custom_payment_to_employee", "custom_payment_journal"],
 		order_by="creation desc",
@@ -381,7 +419,7 @@ def get_claim_detail(name):
 	settings = frappe.get_single("Claim Settings")
 	payment_method = "company"
 	mode_of_payment = ""
-	if credit_account and credit_account == settings.default_payment_account:
+	if credit_account and credit_account in get_all_payment_accounts(settings):
 		payment_method = "employee"
 	elif credit_account:
 		mode_of_payment = frappe.db.get_value(
@@ -443,7 +481,7 @@ def _period_window(period):
 	return start, end, prev_start, prev_end
 
 
-def _aggregate_claims(rows, default_payment_account):
+def _aggregate_claims(rows, payment_accounts):
 	by_type = {}
 	paid_by_me = {
 		"amount": 0.0, "count": 0,
@@ -468,7 +506,7 @@ def _aggregate_claims(rows, default_payment_account):
 		bucket["amount"] += amount
 		bucket["count"] += 1
 
-		if default_payment_account and r.get("credit_account") == default_payment_account:
+		if payment_accounts and r.get("credit_account") in payment_accounts:
 			paid_by_me["amount"] += amount
 			paid_by_me["count"] += 1
 			if (r.get("custom_payment_to_employee") or "") == "Paid":
@@ -506,7 +544,7 @@ def _fetch_claim_rows(user, start, end):
 
 	return frappe.db.sql(
 		f"""
-		SELECT je.name, je.total_debit, je.user_remark,
+		SELECT je.name, je.total_debit, je.user_remark, je.docstatus,
 		       je.custom_payment_to_employee, jea.account AS credit_account
 		FROM `tabJournal Entry` je
 		INNER JOIN `tabJournal Entry Account` jea ON jea.parent = je.name
@@ -521,16 +559,66 @@ def _fetch_claim_rows(user, start, end):
 	)
 
 
+def get_pending_for_user(user):
+	"""Return (amount, count) describing the user's reimbursement position.
+
+	Amount comes from the general ledger balance of the user's payment account —
+	their mapped row in Claim Settings, else the global default — movements only,
+	with opening entries excluded. The sign carries the direction:
+
+	    amount > 0   the company owes the employee this much (credit balance)
+	    amount < 0   the employee owes the company this much (debit balance)
+	    amount == 0  settled
+
+	Count is how many of the user's submitted claims are booked to that same
+	account and haven't been marked custom_payment_to_employee == "Paid" yet.
+	Drafts are excluded because they never reach the ledger.
+	"""
+	settings = frappe.get_single("Claim Settings")
+	account = get_payment_account_for_user(settings, user)
+	if not account:
+		return 0.0, 0
+
+	balance = frappe.db.sql(
+		"""
+		SELECT sum(gle.debit) - sum(gle.credit)
+		FROM `tabGL Entry` gle
+		WHERE gle.account = %(account)s
+		  AND gle.is_cancelled = 0
+		  AND ifnull(gle.is_opening, 'No') = 'No'
+		""",
+		{"account": account},
+	)[0][0]
+
+	# The ledger stores debit - credit, so money owed to the employee sits there
+	# as a credit and comes back negative. Flip it so a positive amount reads as
+	# owed to them, which is the direction the card leads with.
+	amount = -flt(balance)
+	if amount == 0:
+		amount = 0.0  # negating a zero balance otherwise yields -0.0
+
+	count = 0
+	for r in _fetch_claim_rows(user, None, None):
+		if (
+			r.get("docstatus") == 1
+			and r.get("credit_account") == account
+			and (r.get("custom_payment_to_employee") or "") != "Paid"
+		):
+			count += 1
+
+	return amount, count
+
+
 @frappe.whitelist()
 def get_insights(period="month"):
 	user = frappe.session.user
 	settings = frappe.get_single("Claim Settings")
-	default_payment_account = settings.default_payment_account
+	payment_accounts = get_all_payment_accounts(settings)
 
 	start, end, prev_start, prev_end = _period_window(period)
 
 	rows = _fetch_claim_rows(user, start, end)
-	agg = _aggregate_claims(rows, default_payment_account)
+	agg = _aggregate_claims(rows, payment_accounts)
 
 	prev_total_amount = None
 	if prev_start and prev_end:
