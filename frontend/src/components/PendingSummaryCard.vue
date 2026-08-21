@@ -2,7 +2,8 @@
   <router-link
     to="/claims"
     class="summary-card relative block overflow-hidden rounded-3xl p-5 text-white
-           active:scale-[0.98] transition-transform duration-100"
+           active:scale-[0.98] transition-transform duration-100
+           lg:p-6 lg:transition-all lg:hover:-translate-y-0.5 lg:hover:brightness-105"
     :class="`is-${state}`"
   >
     <!-- Soft light -->

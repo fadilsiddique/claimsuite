@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-5">
+  <div class="px-4 py-5 lg:py-8">
     <!-- Filter Tabs -->
     <div class="flex gap-2 mb-5 overflow-x-auto no-scrollbar">
       <button
@@ -20,7 +20,7 @@
     </div>
 
     <!-- Claims List -->
-    <div v-if="claimsResource.loading && !claims.length" class="space-y-3">
+    <div v-if="claimsResource.loading && !claims.length" class="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
       <div
         v-for="i in 5"
         :key="i"
@@ -38,11 +38,14 @@
     </div>
 
     <div v-else-if="claims.length" class="space-y-3">
-      <ClaimCard
-        v-for="claim in claims"
-        :key="claim.name"
-        :claim="claim"
-      />
+      <!-- Two columns on desktop; the sentinel and footers stay outside the grid -->
+      <div class="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
+        <ClaimCard
+          v-for="claim in claims"
+          :key="claim.name"
+          :claim="claim"
+        />
+      </div>
 
       <!-- Infinite scroll sentinel -->
       <div ref="sentinel" class="h-1" />

@@ -8,19 +8,20 @@
       <p class="text-xs text-gray-500 mt-0.5">{{ todayFormatted }}</p>
     </div>
 
-    <!-- Pending reimbursement summary -->
-    <div class="px-4 mb-5">
-      <PendingSummaryCard
-        v-if="stats"
-        :amount="stats.pending_amount || 0"
-        :count="stats.pending_count || 0"
-        :updated-at="new Date()"
-      />
-      <div v-else class="h-[188px] rounded-3xl bg-gray-100 animate-pulse"></div>
-    </div>
+    <!-- Hero row: summary card beside the tiles + primary action on desktop -->
+    <div class="px-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
+      <div class="mb-5 lg:mb-0 lg:col-span-2">
+        <PendingSummaryCard
+          v-if="stats"
+          :amount="stats.pending_amount || 0"
+          :count="stats.pending_count || 0"
+          :updated-at="new Date()"
+        />
+        <div v-else class="h-[188px] rounded-3xl bg-gray-100 animate-pulse"></div>
+      </div>
 
-    <div class="px-4">
-      <div v-if="stats" class="grid grid-cols-2 gap-3 mb-5">
+      <div class="lg:col-span-1">
+      <div v-if="stats" class="grid grid-cols-2 gap-3 mb-5 lg:grid-cols-1 lg:mb-3">
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div class="flex items-center gap-3">
             <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 shrink-0">
@@ -46,7 +47,7 @@
       </div>
 
       <!-- Stats Skeleton -->
-      <div v-else class="grid grid-cols-2 gap-3 mb-5">
+      <div v-else class="grid grid-cols-2 gap-3 mb-5 lg:grid-cols-1 lg:mb-3">
         <div v-for="i in 2" :key="i" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-pulse">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gray-100"></div>
@@ -61,7 +62,7 @@
       <!-- Quick Action -->
       <router-link
         to="/new"
-        class="quick-action-btn flex items-center gap-4 text-white rounded-2xl p-5 mb-6 active:scale-[0.98] transition-all duration-100 shadow-lg"
+        class="quick-action-btn flex items-center gap-4 text-white rounded-2xl p-5 mb-6 active:scale-[0.98] transition-all duration-100 shadow-lg lg:mb-0 lg:hover:brightness-105"
       >
         <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20">
           <FeatherIcon name="plus" class="w-6 h-6" />
@@ -72,7 +73,10 @@
         </div>
         <FeatherIcon name="chevron-right" class="w-5 h-5 text-white/60 ml-auto" />
       </router-link>
+      </div>
+    </div>
 
+    <div class="px-4 lg:mt-6">
       <!-- Recent Claims -->
       <div class="mb-4">
         <div class="flex items-center justify-between mb-3">
@@ -85,7 +89,7 @@
           </router-link>
         </div>
 
-        <div v-if="statsResource.loading && !stats" class="space-y-3">
+        <div v-if="statsResource.loading && !stats" class="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
           <div
             v-for="i in 3"
             :key="i"
@@ -102,7 +106,7 @@
           </div>
         </div>
 
-        <div v-else-if="recentClaims.length" class="space-y-3">
+        <div v-else-if="recentClaims.length" class="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
           <ClaimCard
             v-for="claim in recentClaims"
             :key="claim.name"

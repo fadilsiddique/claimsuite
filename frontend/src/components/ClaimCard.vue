@@ -1,7 +1,8 @@
 <template>
   <router-link
     :to="`/claims/${claim.name}`"
-    class="block bg-white rounded-2xl p-4 border border-gray-100 shadow-sm active:scale-[0.98] transition-transform duration-100"
+    class="block bg-white rounded-2xl p-4 border border-gray-100 shadow-sm active:scale-[0.98] transition-transform duration-100
+           lg:transition-all lg:hover:border-gray-200 lg:hover:shadow-md lg:hover:-translate-y-0.5"
   >
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0 flex-1">

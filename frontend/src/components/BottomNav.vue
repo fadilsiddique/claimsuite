@@ -1,5 +1,5 @@
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-lg border-t border-gray-100 safe-area-bottom">
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-lg border-t border-gray-100 safe-area-bottom lg:hidden">
     <div class="flex items-center justify-around h-16 max-w-lg mx-auto">
       <router-link
         v-for="item in items"

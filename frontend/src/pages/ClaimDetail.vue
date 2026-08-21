@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-5">
+  <div class="px-4 py-5 lg:py-8 lg:max-w-3xl lg:mx-auto">
     <!-- Loading -->
     <div v-if="detailResource.loading && !claim" class="space-y-4">
       <div class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
@@ -107,25 +107,28 @@
         </div>
       </div>
 
-      <!-- Edit (drafts only) -->
-      <button
-        v-if="claim.docstatus === 0"
-        @click="$router.push(`/claims/${claim.name}/edit`)"
-        class="flex items-center justify-center gap-2 w-full h-12 bg-gray-900 rounded-xl text-sm font-semibold text-white hover:bg-gray-800 transition-colors mb-3"
-      >
-        <FeatherIcon name="edit-2" class="w-4 h-4" />
-        Edit Claim
-      </button>
+      <!-- Actions: stacked on mobile, side by side on desktop -->
+      <div class="lg:flex lg:gap-3">
+        <!-- Edit (drafts only) -->
+        <button
+          v-if="claim.docstatus === 0"
+          @click="$router.push(`/claims/${claim.name}/edit`)"
+          class="flex items-center justify-center gap-2 w-full h-12 bg-gray-900 rounded-xl text-sm font-semibold text-white hover:bg-gray-800 transition-colors mb-3 lg:mb-0 lg:flex-1"
+        >
+          <FeatherIcon name="edit-2" class="w-4 h-4" />
+          Edit Claim
+        </button>
 
-      <!-- Open in Desk -->
-      <a
-        :href="`/app/journal-entry/${claim.name}`"
-        target="_blank"
-        class="flex items-center justify-center gap-2 w-full h-12 bg-white border-2 border-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        <FeatherIcon name="external-link" class="w-4 h-4" />
-        Open in Desk
-      </a>
+        <!-- Open in Desk -->
+        <a
+          :href="`/app/journal-entry/${claim.name}`"
+          target="_blank"
+          class="flex items-center justify-center gap-2 w-full h-12 bg-white border-2 border-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors lg:flex-1"
+        >
+          <FeatherIcon name="external-link" class="w-4 h-4" />
+          Open in Desk
+        </a>
+      </div>
     </template>
 
     <!-- Error -->
